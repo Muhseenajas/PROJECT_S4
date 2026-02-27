@@ -1,0 +1,86 @@
+{% extends 'core/base.html' %}
+{% block title %}HR Dashboard - RecruitAI{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>👩‍💼 HR Dashboard</h1>
+        <p>Welcome back, {{ user.get_full_name }}! Manage your recruitment pipeline.</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">📋</div>
+            <div>
+                <div class="stat-value">{{ total_apps }}</div>
+                <div class="stat-label">Total Applications</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">✅</div>
+            <div>
+                <div class="stat-value">{{ shortlisted }}</div>
+                <div class="stat-label">Shortlisted</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon orange">🏆</div>
+            <div>
+                <div class="stat-value">{{ selected }}</div>
+                <div class="stat-label">Selected</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red">❌</div>
+            <div>
+                <div class="stat-value">{{ rejected }}</div>
+                <div class="stat-label">Rejected/Not Shortlisted</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h2 style="font-size:1.2rem; color:#1a1a2e;">Your Job Postings</h2>
+        <a href="{% url 'create_job' %}" class="btn btn-primary">+ Create New Job</a>
+    </div>
+
+    {% if jobs %}
+    {% for job in jobs %}
+    <div class="job-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+            <div>
+                <div class="job-card-title">{{ job.title }}</div>
+                <div class="job-card-meta">📅 Posted {{ job.created_at|date:"M d, Y" }} &nbsp;|&nbsp;
+                    <span style="color:{% if job.is_active %}#27ae60{% else %}#e74c3c{% endif %}">
+                        {% if job.is_active %}🟢 Active{% else %}🔴 Inactive{% endif %}
+                    </span>
+                </div>
+                <div style="margin-top:0.5rem;">
+                    {% for skill in job.get_skills_list %}
+                    <span class="skill-tag">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <div style="text-align:center; padding: 0.5rem 1rem; background:#f8f9fa; border-radius:10px;">
+                    <div style="font-size:1.3rem; font-weight:800; color:#1a1a2e;">{{ job.total }}</div>
+                    <div style="font-size:0.75rem; color:#888;">Applicants</div>
+                </div>
+                <div style="text-align:center; padding: 0.5rem 1rem; background:#e8f8ed; border-radius:10px;">
+                    <div style="font-size:1.3rem; font-weight:800; color:#27ae60;">{{ job.shortlisted }}</div>
+                    <div style="font-size:0.75rem; color:#888;">Shortlisted</div>
+                </div>
+                <a href="{% url 'job_applicants' job.pk %}" class="btn btn-primary btn-sm">View Applicants</a>
+                <a href="{% url 'edit_job' job.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card" style="text-align:center; padding:3rem;">
+        <div style="font-size:3rem; margin-bottom:1rem;">📭</div>
+        <p style="color:#888;">No jobs posted yet. Create your first job posting!</p>
+        <a href="{% url 'create_job' %}" class="btn btn-primary" style="margin-top:1rem;">+ Create Job</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
