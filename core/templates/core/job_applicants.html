@@ -1,0 +1,82 @@
+{% extends 'core/base.html' %}
+{% block title %}Applicants - {{ job.title }} - RecruitAI{% endblock %}
+{% block content %}
+<div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2rem; flex-wrap:wrap; gap:1rem;">
+        <div>
+            <h1 style="font-size:1.6rem; color:#1a1a2e; font-weight:700;">{{ job.title }}</h1>
+            <p style="color:#888;">{{ applications|length }} applicant(s) &nbsp;|&nbsp; Experience: {{ job.required_experience }}</p>
+            <div style="margin-top:0.5rem;">
+                {% for skill in job.get_skills_list %}
+                <span class="skill-tag">{{ skill }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <a href="{% url 'process_all_ai' job.pk %}" class="btn btn-primary">🤖 Run AI on All</a>
+            <a href="{% url 'hr_dashboard' %}" class="btn btn-secondary">← Back</a>
+        </div>
+    </div>
+
+    {% if applications %}
+    <div class="card">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Candidate</th>
+                        <th>Applied</th>
+                        <th>Similarity Score</th>
+                        <th>Interview Score</th>
+                        <th>Final Score</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td>
+                            <span class="rank-num {% if app.rank == 1 %}rank-1{% elif app.rank == 2 %}rank-2{% elif app.rank == 3 %}rank-3{% endif %}">
+                                {% if app.rank %}#{{ app.rank }}{% else %}—{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <strong>{{ app.candidate.get_full_name|default:app.candidate.username }}</strong>
+                            <div style="font-size:0.8rem; color:#888;">{{ app.candidate.email }}</div>
+                        </td>
+                        <td style="font-size:0.85rem; color:#888;">{{ app.applied_at|date:"M d, Y" }}</td>
+                        <td>
+                            {% if app.similarity_score is not None %}
+                            <div style="font-weight:700; color:{% if app.similarity_score >= 0.7 %}#27ae60{% elif app.similarity_score >= 0.5 %}#e67e22{% else %}#e74c3c{% endif %}">
+                                {{ app.similarity_score|floatformat:2 }}
+                            </div>
+                            <div class="score-bar" style="width:100px;">
+                                <div class="score-fill {% if app.similarity_score >= 0.7 %}score-high{% elif app.similarity_score >= 0.5 %}score-medium{% else %}score-low{% endif %}"
+                                     style="width:{{ app.similarity_score|floatformat:0 }}00%"></div>
+                            </div>
+                            {% else %}
+                            <span style="color:#ccc;">Not processed</span>
+                            {% endif %}
+                        </td>
+                        <td>{% if app.interview_score is not None %}{{ app.interview_score }}/10{% else %}—{% endif %}</td>
+                        <td>{% if app.final_score is not None %}<strong>{{ app.final_score|floatformat:3 }}</strong>{% else %}—{% endif %}</td>
+                        <td><span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span></td>
+                        <td>
+                            <a href="{% url 'application_detail_hr' app.pk %}" class="btn btn-info btn-sm">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card" style="text-align:center; padding:3rem;">
+        <div style="font-size:3rem; margin-bottom:1rem;">👥</div>
+        <p style="color:#888;">No applications yet for this job.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

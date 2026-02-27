@@ -1,0 +1,45 @@
+{% extends 'core/base.html' %}
+{% block title %}Apply - {{ job.title }} - RecruitAI{% endblock %}
+{% block content %}
+<div class="container" style="max-width:700px;">
+    <div class="page-header">
+        <h1>Apply for: {{ job.title }}</h1>
+        <p>Upload your resume to apply. Our AI will automatically match your profile.</p>
+    </div>
+
+    <!-- Job Summary -->
+    <div class="card" style="border-left:4px solid #e94560;">
+        <div class="card-title">📋 Job Summary</div>
+        <div style="display:flex; gap:2rem; flex-wrap:wrap; margin-bottom:1rem;">
+            <div><span style="color:#888; font-size:0.85rem;">Experience Required</span><br><strong>{{ job.required_experience }}</strong></div>
+            <div><span style="color:#888; font-size:0.85rem;">Skills</span><br>
+                {% for skill in job.get_skills_list %}<span class="skill-tag">{{ skill }}</span>{% endfor %}
+            </div>
+        </div>
+        <div style="color:#555; font-size:0.9rem; line-height:1.6;">{{ job.description|truncatewords:80 }}</div>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="card">
+        <div class="card-title">📤 Upload Your Resume</div>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Resume File *</label>
+                <input type="file" name="resume" class="form-control" accept=".pdf,.docx" required>
+                <div class="form-text">Accepted formats: PDF, DOCX &nbsp;|&nbsp; Max size: 5MB</div>
+                {% if form.resume.errors %}<ul class="errorlist">{% for e in form.resume.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+
+            <div class="alert alert-info" style="margin-top:1rem;">
+                🤖 <strong>AI Processing:</strong> After submission, our SBERT model will analyze your resume and compute a match score against the job description. You'll see your match percentage instantly!
+            </div>
+
+            <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1.5rem;">
+                <a href="{% url 'job_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Submit Application 🚀</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

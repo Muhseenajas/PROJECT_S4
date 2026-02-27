@@ -1,0 +1,60 @@
+{% extends 'core/base.html' %}
+{% block title %}My Applications - RecruitAI{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>👨‍🎓 My Applications</h1>
+        <p>Welcome, {{ user.get_full_name }}! Track your application progress here.</p>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <a href="{% url 'job_list' %}" class="btn btn-primary">🔍 Browse Jobs</a>
+    </div>
+
+    {% if applications %}
+    {% for app in applications %}
+    <div class="job-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+            <div style="flex:1;">
+                <div class="job-card-title">{{ app.job.title }}</div>
+                <div class="job-card-meta">Applied {{ app.applied_at|date:"M d, Y" }}</div>
+                <div style="margin-top:0.75rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                    <span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span>
+                    {% if app.similarity_score is not None %}
+                    <span style="font-size:0.85rem; color:#555;">
+                        🤖 Match: <strong style="color:{% if app.similarity_score >= 0.6 %}#27ae60{% else %}#e74c3c{% endif %}">{{ app.similarity_score|floatformat:2 }}</strong>
+                    </span>
+                    {% endif %}
+                    {% if app.rank %}
+                    <span style="font-size:0.85rem; color:#888;">Rank: <strong>#{{ app.rank }}</strong></span>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <a href="{% url 'application_status' app.pk %}" class="btn btn-info btn-sm">View Details →</a>
+            </div>
+        </div>
+
+        <!-- Status Progress Bar -->
+        <div style="margin-top:1rem; display:flex; gap:0.25rem;">
+            {% with stages="applied,shortlisted,hr_interview,technical_interview,final_interview,selected" %}
+            {% for stage in stages.split|join:',' %}
+            {% endfor %}
+            {% endwith %}
+            {% for stage_name, stage_label in app.STATUS_CHOICES %}
+            {% if stage_name not in 'not_shortlisted,rejected' %}
+            <div style="flex:1; height:4px; border-radius:2px; background:{% if app.status == stage_name or app.status == 'selected' and stage_name == 'selected' %}#e94560{% elif forloop.counter <= 2 %}#27ae60{% else %}#e8e8e8{% endif %};"></div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card" style="text-align:center; padding:3rem;">
+        <div style="font-size:3rem; margin-bottom:1rem;">📭</div>
+        <p style="color:#888; margin-bottom:1rem;">You haven't applied to any jobs yet.</p>
+        <a href="{% url 'job_list' %}" class="btn btn-primary">Browse Available Jobs</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
