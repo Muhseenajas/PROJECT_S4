@@ -4,11 +4,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db.models import Count, Q
+from django.db import models
+from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 from .models import UserProfile, Job, Application, InterviewNote
-from .forms import RegisterForm, JobForm, ResumeUploadForm, InterviewUpdateForm, InterviewNoteForm
+from .forms import RegisterForm, JobForm, ResumeUploadForm, InterviewUpdateForm, InterviewNoteForm, ProfileUpdateForm
 from .ai_engine import process_application, rank_applicants_for_job
 
 
@@ -82,6 +84,28 @@ def dashboard(request):
     return redirect('candidate_dashboard')
 
 
+# ── Profile Views ─────────────────────────────────────────────────────────────
+
+@login_required
+def view_profile(request):
+    profile = getattr(request.user, 'profile', None)
+    return render(request, 'core/profile.html', {'profile': profile})
+
+
+@login_required
+def edit_profile(request):
+    profile = getattr(request.user, 'profile', None)
+    if request.method == 'POST':
+        form = ProfileUpdateForm(request.POST, instance=request.user, profile=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully!")
+            return redirect('view_profile')
+    else:
+        form = ProfileUpdateForm(instance=request.user, profile=profile)
+    return render(request, 'core/edit_profile.html', {'form': form})
+
+
 # ── HR Views ─────────────────────────────────────────────────────────────────
 
 @require_hr
@@ -151,10 +175,8 @@ def application_detail_hr(request, pk):
             form = InterviewUpdateForm(request.POST, instance=application)
             if form.is_valid():
                 app = form.save()
-                # Recompute final score if interview score given
                 if app.interview_score is not None:
                     app.compute_final_score()
-                # Re-rank
                 rank_applicants_for_job(application.job)
                 messages.success(request, "Application updated!")
                 return redirect('application_detail_hr', pk=pk)
@@ -183,7 +205,6 @@ def application_detail_hr(request, pk):
 
 @require_hr
 def process_ai(request, pk):
-    """Trigger AI processing for an application."""
     application = get_object_or_404(Application, pk=pk, job__hr=request.user)
     try:
         score = process_application(application)
@@ -196,7 +217,6 @@ def process_ai(request, pk):
 
 @require_hr
 def process_all_ai(request, job_pk):
-    """Process all applications for a job."""
     job = get_object_or_404(Job, pk=job_pk, hr=request.user)
     applications = job.applications.all()
     errors = []
@@ -242,7 +262,11 @@ def candidate_dashboard(request):
 
 @require_candidate
 def job_list(request):
-    jobs = Job.objects.filter(is_active=True).select_related('hr')
+    today = timezone.now().date()
+    jobs = Job.objects.filter(
+        Q(start_date__isnull=True) | Q(start_date__lte=today),
+        Q(end_date__isnull=True) | Q(end_date__gte=today)
+    ).select_related('hr')
     applied_job_ids = Application.objects.filter(
         candidate=request.user
     ).values_list('job_id', flat=True)
@@ -254,9 +278,7 @@ def job_list(request):
 
 @require_candidate
 def apply_job(request, pk):
-    job = get_object_or_404(Job, pk=pk, is_active=True)
-
-    # Check duplicate
+    job = get_object_or_404(Job, pk=pk)
     if Application.objects.filter(job=job, candidate=request.user).exists():
         messages.warning(request, "You have already applied for this job.")
         return redirect('job_list')
@@ -269,15 +291,12 @@ def apply_job(request, pk):
             application.candidate = request.user
             application.status = 'applied'
             application.save()
-
-            # Auto-trigger AI processing
             try:
                 process_application(application)
                 rank_applicants_for_job(job)
                 messages.success(request, f"Application submitted! Your match score: {application.similarity_score:.2%}")
             except Exception as e:
                 messages.success(request, "Application submitted! AI processing will run shortly.")
-
             return redirect('candidate_dashboard')
     else:
         form = ResumeUploadForm()

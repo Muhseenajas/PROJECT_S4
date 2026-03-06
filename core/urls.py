@@ -8,6 +8,10 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
 
+    # Profile
+    path('profile/', views.view_profile, name='view_profile'),
+    path('profile/edit/', views.edit_profile, name='edit_profile'),
+
     # HR
     path('hr/dashboard/', views.hr_dashboard, name='hr_dashboard'),
     path('hr/jobs/create/', views.create_job, name='create_job'),

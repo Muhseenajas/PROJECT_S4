@@ -31,17 +31,50 @@ class RegisterForm(UserCreationForm):
         return user
 
 
+class ProfileUpdateForm(forms.ModelForm):
+    phone = forms.CharField(max_length=20, required=False, label="Phone Number")
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+
+    def __init__(self, *args, profile=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.profile = profile
+        if profile:
+            self.fields['phone'].initial = profile.phone
+
+    def save(self, commit=True):
+        user = super().save(commit=commit)
+        if self.profile:
+            self.profile.phone = self.cleaned_data.get('phone', '')
+            self.profile.save()
+        return user
+
+
 class JobForm(forms.ModelForm):
     class Meta:
         model = Job
-        fields = ['title', 'required_skills', 'required_experience', 'description', 'is_active']
+        fields = ['title', 'required_skills', 'required_experience', 'description', 'start_date', 'end_date']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 6}),
             'required_skills': forms.TextInput(attrs={'placeholder': 'Python, Django, Machine Learning'}),
+            'start_date': forms.DateInput(attrs={'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
         help_texts = {
             'required_skills': 'Enter skills separated by commas',
+            'start_date': 'Job posting start date',
+            'end_date': 'Application deadline date',
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        if start_date and end_date and end_date < start_date:
+            raise forms.ValidationError("End date cannot be before start date.")
+        return cleaned_data
 
 
 class ResumeUploadForm(forms.ModelForm):

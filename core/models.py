@@ -25,7 +25,8 @@ class Job(models.Model):
     required_skills = models.TextField(help_text="Comma-separated skills")
     required_experience = models.CharField(max_length=100)
     description = models.TextField()
-    is_active = models.BooleanField(default=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -34,6 +35,13 @@ class Job(models.Model):
 
     def get_skills_list(self):
         return [s.strip() for s in self.required_skills.split(',')]
+
+    def is_active(self):
+        from django.utils import timezone
+        today = timezone.now().date()
+        if self.start_date and self.end_date:
+            return self.start_date <= today <= self.end_date
+        return True
 
 
 class Application(models.Model):

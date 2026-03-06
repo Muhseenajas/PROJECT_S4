@@ -1,0 +1,59 @@
+{% extends 'core/base.html' %}
+{% block title %}My Profile - RecruitAI{% endblock %}
+{% block content %}
+<div class="container" style="max-width:650px;">
+    <div class="page-header">
+        <h1>👤 My Profile</h1>
+        <p>Your personal account information</p>
+    </div>
+    <div class="card">
+        <div style="text-align:center; margin-bottom:1.5rem;">
+            <div class="profile-avatar">
+                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+            </div>
+            <div style="font-size:1.3rem; font-weight:700; color:#1a1a2e;">{{ user.get_full_name|default:user.username }}</div>
+            <div style="margin-top:0.4rem;">
+                {% if profile.is_hr %}
+                <span class="badge" style="background:#e8f4fd; color:#2980b9; font-size:0.85rem;">👩‍💼 HR / Admin</span>
+                {% else %}
+                <span class="badge" style="background:#e8f8ed; color:#27ae60; font-size:0.85rem;">👨‍🎓 Candidate</span>
+                {% endif %}
+            </div>
+        </div>
+        <div style="border-top:1px solid #f0f0f0; padding-top:1rem;">
+            <div class="profile-info-row">
+                <div class="profile-info-label">👤 Username</div>
+                <div class="profile-info-value">{{ user.username }}</div>
+            </div>
+            <div class="profile-info-row">
+                <div class="profile-info-label">📛 First Name</div>
+                <div class="profile-info-value">{{ user.first_name|default:"Not set" }}</div>
+            </div>
+            <div class="profile-info-row">
+                <div class="profile-info-label">📛 Last Name</div>
+                <div class="profile-info-value">{{ user.last_name|default:"Not set" }}</div>
+            </div>
+            <div class="profile-info-row">
+                <div class="profile-info-label">📧 Email</div>
+                <div class="profile-info-value">{{ user.email|default:"Not set" }}</div>
+            </div>
+            <div class="profile-info-row">
+                <div class="profile-info-label">📞 Phone</div>
+                <div class="profile-info-value">{{ profile.phone|default:"Not set" }}</div>
+            </div>
+            <div class="profile-info-row">
+                <div class="profile-info-label">🎭 Role</div>
+                <div class="profile-info-value">{{ profile.get_role_display }}</div>
+            </div>
+            <div class="profile-info-row" style="border:none;">
+                <div class="profile-info-label">📅 Member Since</div>
+                <div class="profile-info-value">{{ user.date_joined|date:"M d, Y" }}</div>
+            </div>
+        </div>
+        <div style="display:flex; gap:1rem; margin-top:1.5rem; justify-content:flex-end;">
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">← Back</a>
+            <a href="{% url 'edit_profile' %}" class="btn btn-primary">✏️ Edit Profile</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -18,26 +18,46 @@
                 <label class="form-label">Required Skills *</label>
                 <input type="text" name="required_skills" class="form-control" value="{{ form.required_skills.value|default:'' }}" placeholder="Python, Django, PostgreSQL, REST API" required>
                 <div class="form-text">Enter skills separated by commas</div>
-                {{ form.required_skills.errors }}
             </div>
             <div class="form-group">
                 <label class="form-label">Required Experience *</label>
                 <input type="text" name="required_experience" class="form-control" value="{{ form.required_experience.value|default:'' }}" placeholder="3+ years" required>
-                {{ form.required_experience.errors }}
             </div>
             <div class="form-group">
                 <label class="form-label">Full Job Description *</label>
-                <textarea name="description" class="form-control" rows="8" placeholder="Describe the role, responsibilities, qualifications, and what you're looking for..." required>{{ form.description.value|default:'' }}</textarea>
-                {{ form.description.errors }}
+                <textarea name="description" class="form-control" rows="8" placeholder="Describe the role, responsibilities, qualifications..." required>{{ form.description.value|default:'' }}</textarea>
             </div>
-            <div class="form-group">
-                <label class="radio-option" style="display:inline-flex;">
-                    <input type="checkbox" name="is_active" {% if form.is_active.value != False %}checked{% endif %}> &nbsp; Active (visible to candidates)
-                </label>
+
+            <!-- Start Date and End Date -->
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">📅 Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ form.start_date.value|default:'' }}">
+                    <div class="form-text">Job posting start date</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">⏰ End Date (Deadline)</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ form.end_date.value|default:'' }}">
+                    <div class="form-text">Application deadline date</div>
+                </div>
             </div>
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="alert alert-info">
+                📌 <strong>Job Status</strong> is automatic:
+                🟢 <strong>Active</strong> = today is between Start and End date &nbsp;|&nbsp;
+                🔴 <strong>Expired</strong> = past End date &nbsp;|&nbsp;
+                ⚪ Leave empty = always active
+            </div>
+
             <div style="display:flex; gap:1rem; justify-content:flex-end;">
                 <a href="{% url 'hr_dashboard' %}" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">{% if job %}Update Job{% else %}Create Job{% endif %}</button>
+                <button type="submit" class="btn btn-primary">
+                    {% if job %}Update Job{% else %}Create Job{% endif %}
+                </button>
             </div>
         </form>
     </div>

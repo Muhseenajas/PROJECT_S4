@@ -10,8 +10,8 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ['title', 'hr', 'is_active', 'created_at']
-    list_filter = ['is_active']
+    list_display = ['title', 'hr', 'start_date', 'end_date', 'created_at']
+    list_filter = ['start_date', 'end_date']
     search_fields = ['title', 'required_skills']
 
 
