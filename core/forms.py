@@ -93,27 +93,108 @@ class ResumeUploadForm(forms.ModelForm):
         return resume
 
 
-class InterviewUpdateForm(forms.ModelForm):
+# ── Phase 4: Shortlist Form ───────────────────────────────────────────────────
+
+class ShortlistForm(forms.ModelForm):
     class Meta:
         model = Application
-        fields = ['status', 'interview_date', 'interview_score', 'hr_notes']
-        widgets = {
-            'interview_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'hr_notes': forms.Textarea(attrs={'rows': 4}),
-        }
+        fields = ['status']
 
-    STATUS_CHOICES_HR = [
+    STATUS_CHOICES = [
         ('shortlisted', 'Shortlisted'),
-        ('hr_interview', 'HR Interview'),
-        ('technical_interview', 'Technical Interview'),
-        ('final_interview', 'Final Interview'),
-        ('selected', 'Selected'),
-        ('rejected', 'Rejected'),
+        ('not_shortlisted', 'Not Shortlisted'),
     ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['status'].choices = self.STATUS_CHOICES_HR
+        self.fields['status'].choices = self.STATUS_CHOICES
+
+
+# ── Phase 5: Technical Interview Forms ───────────────────────────────────────
+
+class TechnicalScheduleForm(forms.ModelForm):
+    class Meta:
+        model = Application
+        fields = ['technical_date']
+        widgets = {
+            'technical_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+        labels = {
+            'technical_date': 'Technical Interview Date',
+        }
+
+
+class TechnicalScoreForm(forms.ModelForm):
+    class Meta:
+        model = Application
+        fields = ['technical_score', 'technical_attended', 'technical_feedback']
+        widgets = {
+            'technical_feedback': forms.Textarea(attrs={'rows': 4,
+                'placeholder': 'Enter feedback about technical interview...'}),
+            'technical_score': forms.NumberInput(attrs={'min': 0, 'max': 10,
+                'step': 0.1, 'placeholder': 'Score out of 10'}),
+        }
+        labels = {
+            'technical_score': 'Technical Score (out of 10)',
+            'technical_attended': 'Candidate Attended?',
+            'technical_feedback': 'Technical Feedback',
+        }
+
+
+# ── Phase 6: HR Interview Forms ───────────────────────────────────────────────
+
+class HRScheduleForm(forms.ModelForm):
+    class Meta:
+        model = Application
+        fields = ['hr_date']
+        widgets = {
+            'hr_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+        labels = {
+            'hr_date': 'HR Interview Date',
+        }
+
+
+class HRScoreForm(forms.ModelForm):
+    class Meta:
+        model = Application
+        fields = ['hr_score', 'hr_attended', 'hr_feedback']
+        widgets = {
+            'hr_feedback': forms.Textarea(attrs={'rows': 4,
+                'placeholder': 'Enter feedback about HR interview...'}),
+            'hr_score': forms.NumberInput(attrs={'min': 0, 'max': 10,
+                'step': 0.1, 'placeholder': 'Score out of 10'}),
+        }
+        labels = {
+            'hr_score': 'HR Score (out of 10)',
+            'hr_attended': 'Candidate Attended?',
+            'hr_feedback': 'HR Feedback',
+        }
+
+
+# ── Phase 8: Final Decision Form ──────────────────────────────────────────────
+
+class FinalDecisionForm(forms.ModelForm):
+    class Meta:
+        model = Application
+        fields = ['final_decision', 'hr_decision_notes']
+        widgets = {
+            'hr_decision_notes': forms.Textarea(attrs={'rows': 4,
+                'placeholder': 'Enter notes for final decision...'}),
+        }
+        labels = {
+            'final_decision': 'Final Decision',
+            'hr_decision_notes': 'Decision Notes',
+        }
+
+    DECISION_CHOICES = [
+        ('selected', '✅ Select Candidate'),
+        ('rejected', '❌ Reject Candidate'),
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['final_decision'].choices = self.DECISION_CHOICES
 
 
 class InterviewNoteForm(forms.ModelForm):

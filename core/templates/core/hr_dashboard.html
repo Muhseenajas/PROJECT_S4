@@ -7,6 +7,7 @@
         <p>Welcome back, {{ user.get_full_name }}! Manage your recruitment pipeline.</p>
     </div>
 
+    <!-- Phase 10: Analytics Stats -->
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-icon blue">📋</div>
@@ -23,7 +24,21 @@
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon orange">🏆</div>
+            <div class="stat-icon blue">💻</div>
+            <div>
+                <div class="stat-value">{{ technical_attended }}</div>
+                <div class="stat-label">Technical Attended</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon orange">🤝</div>
+            <div>
+                <div class="stat-value">{{ hr_attended }}</div>
+                <div class="stat-label">HR Attended</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">🏆</div>
             <div>
                 <div class="stat-value">{{ selected }}</div>
                 <div class="stat-label">Selected</div>
@@ -33,7 +48,7 @@
             <div class="stat-icon red">❌</div>
             <div>
                 <div class="stat-value">{{ rejected }}</div>
-                <div class="stat-label">Rejected/Not Shortlisted</div>
+                <div class="stat-label">Rejected</div>
             </div>
         </div>
     </div>
@@ -49,9 +64,13 @@
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
             <div>
                 <div class="job-card-title">{{ job.title }}</div>
-                <div class="job-card-meta">📅 Posted {{ job.created_at|date:"M d, Y" }} &nbsp;|&nbsp;
-                    <span style="color:{% if job.is_active %}#27ae60{% else %}#e74c3c{% endif %}">
-                        {% if job.is_active %}🟢 Active{% else %}🔴 Inactive{% endif %}
+                <div class="job-card-meta">
+                    📅 Start: <strong>{{ job.start_date|default:"Not set" }}</strong>
+                    &nbsp;|&nbsp;
+                    ⏰ Deadline: <strong>{{ job.end_date|default:"No deadline" }}</strong>
+                    &nbsp;|&nbsp;
+                    <span style="color:{% if job.is_active %}#27ae60{% else %}#e74c3c{% endif %}; font-weight:600;">
+                        {% if job.is_active %}🟢 Active{% else %}🔴 Expired{% endif %}
                     </span>
                 </div>
                 <div style="margin-top:0.5rem;">
@@ -61,11 +80,11 @@
                 </div>
             </div>
             <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                <div style="text-align:center; padding: 0.5rem 1rem; background:#f8f9fa; border-radius:10px;">
+                <div style="text-align:center; padding:0.5rem 1rem; background:#f8f9fa; border-radius:10px;">
                     <div style="font-size:1.3rem; font-weight:800; color:#1a1a2e;">{{ job.total }}</div>
                     <div style="font-size:0.75rem; color:#888;">Applicants</div>
                 </div>
-                <div style="text-align:center; padding: 0.5rem 1rem; background:#e8f8ed; border-radius:10px;">
+                <div style="text-align:center; padding:0.5rem 1rem; background:#e8f8ed; border-radius:10px;">
                     <div style="font-size:1.3rem; font-weight:800; color:#27ae60;">{{ job.shortlisted }}</div>
                     <div style="font-size:0.75rem; color:#888;">Shortlisted</div>
                 </div>

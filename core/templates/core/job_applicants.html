@@ -27,44 +27,120 @@
                         <th>Rank</th>
                         <th>Candidate</th>
                         <th>Applied</th>
-                        <th>Similarity Score</th>
-                        <th>Interview Score</th>
+                        <th>Resume Score</th>
+                        <th>Technical Score</th>
+                        <th>HR Score</th>
                         <th>Final Score</th>
                         <th>Status</th>
-                        <th>Action</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for app in applications %}
                     <tr>
+                        <!-- Rank -->
                         <td>
                             <span class="rank-num {% if app.rank == 1 %}rank-1{% elif app.rank == 2 %}rank-2{% elif app.rank == 3 %}rank-3{% endif %}">
                                 {% if app.rank %}#{{ app.rank }}{% else %}—{% endif %}
                             </span>
                         </td>
+
+                        <!-- Candidate -->
                         <td>
                             <strong>{{ app.candidate.get_full_name|default:app.candidate.username }}</strong>
                             <div style="font-size:0.8rem; color:#888;">{{ app.candidate.email }}</div>
                         </td>
+
+                        <!-- Applied Date -->
                         <td style="font-size:0.85rem; color:#888;">{{ app.applied_at|date:"M d, Y" }}</td>
+
+                        <!-- Resume Score -->
                         <td>
-                            {% if app.similarity_score is not None %}
-                            <div style="font-weight:700; color:{% if app.similarity_score >= 0.7 %}#27ae60{% elif app.similarity_score >= 0.5 %}#e67e22{% else %}#e74c3c{% endif %}">
-                                {{ app.similarity_score|floatformat:2 }}
+                            {% if app.resume_score is not None %}
+                            <div style="font-weight:700; color:{% if app.resume_score >= 0.7 %}#27ae60{% elif app.resume_score >= 0.5 %}#e67e22{% else %}#e74c3c{% endif %}">
+                                {{ app.resume_score|floatformat:2 }}
                             </div>
-                            <div class="score-bar" style="width:100px;">
-                                <div class="score-fill {% if app.similarity_score >= 0.7 %}score-high{% elif app.similarity_score >= 0.5 %}score-medium{% else %}score-low{% endif %}"
-                                     style="width:{{ app.similarity_score|floatformat:0 }}00%"></div>
+                            <div class="score-bar" style="width:80px;">
+                                <div class="score-fill {% if app.resume_score >= 0.7 %}score-high{% elif app.resume_score >= 0.5 %}score-medium{% else %}score-low{% endif %}"
+                                     style="width:{% widthratio app.resume_score 1 100 %}%"></div>
                             </div>
                             {% else %}
-                            <span style="color:#ccc;">Not processed</span>
+                            <span style="color:#ccc; font-size:0.85rem;">Not processed</span>
                             {% endif %}
                         </td>
-                        <td>{% if app.interview_score is not None %}{{ app.interview_score }}/10{% else %}—{% endif %}</td>
-                        <td>{% if app.final_score is not None %}<strong>{{ app.final_score|floatformat:3 }}</strong>{% else %}—{% endif %}</td>
-                        <td><span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span></td>
+
+                        <!-- Technical Score -->
                         <td>
-                            <a href="{% url 'application_detail_hr' app.pk %}" class="btn btn-info btn-sm">View</a>
+                            {% if app.technical_score is not None %}
+                            <span style="font-weight:700; color:{% if app.technical_score >= 7 %}#27ae60{% elif app.technical_score >= 5 %}#e67e22{% else %}#e74c3c{% endif %}">
+                                {{ app.technical_score }}/10
+                            </span>
+                            {% if app.technical_attended == False %}
+                            <div style="font-size:0.75rem; color:#e74c3c;">Absent</div>
+                            {% endif %}
+                            {% else %}—{% endif %}
+                        </td>
+
+                        <!-- HR Score -->
+                        <td>
+                            {% if app.hr_score is not None %}
+                            <span style="font-weight:700; color:{% if app.hr_score >= 7 %}#27ae60{% elif app.hr_score >= 5 %}#e67e22{% else %}#e74c3c{% endif %}">
+                                {{ app.hr_score }}/10
+                            </span>
+                            {% if app.hr_attended == False %}
+                            <div style="font-size:0.75rem; color:#e74c3c;">Absent</div>
+                            {% endif %}
+                            {% else %}—{% endif %}
+                        </td>
+
+                        <!-- Final Score -->
+                        <td>
+                            {% if app.final_score is not None %}
+                            <strong style="color:{% if app.final_score >= 0.7 %}#27ae60{% elif app.final_score >= 0.5 %}#e67e22{% else %}#e74c3c{% endif %}">
+                                {{ app.final_score|floatformat:3 }}
+                            </strong>
+                            {% if app.system_recommendation %}
+                            <div style="font-size:0.75rem; color:{% if app.system_recommendation == 'selected' %}#27ae60{% else %}#e74c3c{% endif %};">
+                                🤖 {{ app.system_recommendation|capfirst }}
+                            </div>
+                            {% endif %}
+                            {% else %}—{% endif %}
+                        </td>
+
+                        <!-- Status -->
+                        <td><span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span></td>
+
+                        <!-- Actions based on status -->
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                                <a href="{% url 'application_detail_hr' app.pk %}" class="btn btn-info btn-sm">👁 View</a>
+
+                                {% if app.status == 'applied' %}
+                                <a href="{% url 'shortlist_candidate' app.pk %}" class="btn btn-warning btn-sm">📋 Shortlist</a>
+
+                                {% elif app.status == 'shortlisted' %}
+                                <a href="{% url 'schedule_technical' app.pk %}" class="btn btn-primary btn-sm">📅 Schedule Tech</a>
+
+                                {% elif app.status == 'technical_scheduled' %}
+                                <a href="{% url 'enter_technical_score' app.pk %}" class="btn btn-success btn-sm">📝 Tech Score</a>
+
+                                {% elif app.status == 'technical_completed' %}
+                                <a href="{% url 'schedule_hr_interview' app.pk %}" class="btn btn-primary btn-sm">📅 Schedule HR</a>
+
+                                {% elif app.status == 'hr_scheduled' %}
+                                <a href="{% url 'enter_hr_score' app.pk %}" class="btn btn-success btn-sm">📝 HR Score</a>
+
+                                {% elif app.status == 'system_recommended' %}
+                                <a href="{% url 'final_decision' app.pk %}" class="btn btn-warning btn-sm">⚖️ Final Decision</a>
+
+                                {% elif app.status == 'selected' %}
+                                <span style="color:#27ae60; font-weight:700; font-size:0.85rem;">✅ Selected</span>
+
+                                {% elif app.status == 'rejected' %}
+                                <span style="color:#e74c3c; font-weight:700; font-size:0.85rem;">❌ Rejected</span>
+
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

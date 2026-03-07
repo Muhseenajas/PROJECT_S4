@@ -17,10 +17,17 @@ class JobAdmin(admin.ModelAdmin):
 
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display = ['candidate', 'job', 'status', 'similarity_score', 'final_score', 'rank', 'applied_at']
-    list_filter = ['status']
+    list_display = [
+        'candidate', 'job', 'status',
+        'resume_score', 'technical_score', 'hr_score',
+        'final_score', 'system_recommendation', 'rank', 'applied_at'
+    ]
+    list_filter = ['status', 'system_recommendation', 'final_decision']
     search_fields = ['candidate__username', 'job__title']
-    readonly_fields = ['similarity_score', 'final_score', 'rank']
+    readonly_fields = [
+        'resume_score', 'final_score', 'rank',
+        'system_recommendation', 'applied_at', 'updated_at'
+    ]
 
 
 @admin.register(InterviewNote)

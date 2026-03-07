@@ -1,23 +1,24 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db.models import Count, Q
-from django.db import models
 from django.utils import timezone
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
 
 from .models import UserProfile, Job, Application, InterviewNote
-from .forms import RegisterForm, JobForm, ResumeUploadForm, InterviewUpdateForm, InterviewNoteForm, ProfileUpdateForm
+from .forms import (
+    RegisterForm, ProfileUpdateForm, JobForm,
+    ResumeUploadForm, InterviewNoteForm,
+    ShortlistForm, TechnicalScheduleForm, TechnicalScoreForm,
+    HRScheduleForm, HRScoreForm, FinalDecisionForm
+)
 from .ai_engine import process_application, rank_applicants_for_job
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def require_hr(func):
-    """Decorator: requires HR role."""
     @login_required
     def wrapper(request, *args, **kwargs):
         if not hasattr(request.user, 'profile') or not request.user.profile.is_hr():
@@ -29,7 +30,6 @@ def require_hr(func):
 
 
 def require_candidate(func):
-    """Decorator: requires candidate role."""
     @login_required
     def wrapper(request, *args, **kwargs):
         if not hasattr(request.user, 'profile') or not request.user.profile.is_candidate():
@@ -117,6 +117,14 @@ def hr_dashboard(request):
     )
     total_apps = Application.objects.filter(job__hr=request.user).count()
     shortlisted = Application.objects.filter(job__hr=request.user, status='shortlisted').count()
+    technical_attended = Application.objects.filter(
+        job__hr=request.user, status__in=['technical_completed', 'hr_scheduled', 'hr_completed', 'system_recommended', 'selected', 'rejected'],
+        technical_attended=True
+    ).count()
+    hr_attended = Application.objects.filter(
+        job__hr=request.user, status__in=['hr_completed', 'system_recommended', 'selected', 'rejected'],
+        hr_attended=True
+    ).count()
     selected = Application.objects.filter(job__hr=request.user, status='selected').count()
     rejected = Application.objects.filter(job__hr=request.user, status__in=['not_shortlisted', 'rejected']).count()
 
@@ -124,6 +132,8 @@ def hr_dashboard(request):
         'jobs': jobs,
         'total_apps': total_apps,
         'shortlisted': shortlisted,
+        'technical_attended': technical_attended,
+        'hr_attended': hr_attended,
         'selected': selected,
         'rejected': rejected,
     }
@@ -162,57 +172,13 @@ def edit_job(request, pk):
 @require_hr
 def job_applicants(request, pk):
     job = get_object_or_404(Job, pk=pk, hr=request.user)
-    applications = job.applications.select_related('candidate', 'candidate__profile').order_by('-similarity_score')
-    return render(request, 'core/job_applicants.html', {'job': job, 'applications': applications})
-
-
-@require_hr
-def application_detail_hr(request, pk):
-    application = get_object_or_404(Application, pk=pk, job__hr=request.user)
-
-    if request.method == 'POST':
-        if 'update_interview' in request.POST:
-            form = InterviewUpdateForm(request.POST, instance=application)
-            if form.is_valid():
-                app = form.save()
-                if app.interview_score is not None:
-                    app.compute_final_score()
-                rank_applicants_for_job(application.job)
-                messages.success(request, "Application updated!")
-                return redirect('application_detail_hr', pk=pk)
-        elif 'add_note' in request.POST:
-            note_form = InterviewNoteForm(request.POST)
-            if note_form.is_valid():
-                note = note_form.save(commit=False)
-                note.application = application
-                note.created_by = request.user
-                note.save()
-                messages.success(request, "Note added!")
-                return redirect('application_detail_hr', pk=pk)
-
-    form = InterviewUpdateForm(instance=application)
-    note_form = InterviewNoteForm()
-    notes = application.notes.all().order_by('-created_at')
-
-    context = {
-        'application': application,
-        'form': form,
-        'note_form': note_form,
-        'notes': notes,
-    }
-    return render(request, 'core/application_detail_hr.html', context)
-
-
-@require_hr
-def process_ai(request, pk):
-    application = get_object_or_404(Application, pk=pk, job__hr=request.user)
-    try:
-        score = process_application(application)
-        rank_applicants_for_job(application.job)
-        messages.success(request, f"AI processed. Similarity score: {score:.2%}")
-    except Exception as e:
-        messages.error(request, f"AI processing failed: {str(e)}")
-    return redirect('application_detail_hr', pk=pk)
+    applications = job.applications.select_related(
+        'candidate', 'candidate__profile'
+    ).order_by('-resume_score')
+    return render(request, 'core/job_applicants.html', {
+        'job': job,
+        'applications': applications
+    })
 
 
 @require_hr
@@ -229,8 +195,151 @@ def process_all_ai(request, job_pk):
     if errors:
         messages.warning(request, f"Processed with {len(errors)} errors.")
     else:
-        messages.success(request, f"All {applications.count()} applications processed and ranked!")
+        messages.success(request, f"All {applications.count()} applications processed!")
     return redirect('job_applicants', pk=job_pk)
+
+
+# ── Phase 4: Shortlist ────────────────────────────────────────────────────────
+
+@require_hr
+def shortlist_candidate(request, pk):
+    application = get_object_or_404(Application, pk=pk, job__hr=request.user)
+    if request.method == 'POST':
+        form = ShortlistForm(request.POST, instance=application)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Status updated to: {application.get_status_display()}")
+            return redirect('job_applicants', pk=application.job.pk)
+    else:
+        form = ShortlistForm(instance=application)
+    return render(request, 'core/shortlist.html', {
+        'application': application,
+        'form': form
+    })
+
+
+# ── Phase 5: Technical Interview ─────────────────────────────────────────────
+
+@require_hr
+def schedule_technical(request, pk):
+    application = get_object_or_404(Application, pk=pk, job__hr=request.user)
+    if request.method == 'POST':
+        form = TechnicalScheduleForm(request.POST, instance=application)
+        if form.is_valid():
+            app = form.save(commit=False)
+            app.status = 'technical_scheduled'
+            app.save()
+            messages.success(request, f"Technical interview scheduled for {app.technical_date}")
+            return redirect('job_applicants', pk=application.job.pk)
+    else:
+        form = TechnicalScheduleForm(instance=application)
+    return render(request, 'core/schedule_technical.html', {
+        'application': application,
+        'form': form
+    })
+
+
+@require_hr
+def enter_technical_score(request, pk):
+    application = get_object_or_404(Application, pk=pk, job__hr=request.user)
+    if request.method == 'POST':
+        form = TechnicalScoreForm(request.POST, instance=application)
+        if form.is_valid():
+            app = form.save(commit=False)
+            app.status = 'technical_completed'
+            app.save()
+            messages.success(request, "Technical interview scores saved!")
+            return redirect('job_applicants', pk=application.job.pk)
+    else:
+        form = TechnicalScoreForm(instance=application)
+    return render(request, 'core/enter_technical_score.html', {
+        'application': application,
+        'form': form
+    })
+
+
+# ── Phase 6: HR Interview ─────────────────────────────────────────────────────
+
+@require_hr
+def schedule_hr_interview(request, pk):
+    application = get_object_or_404(Application, pk=pk, job__hr=request.user)
+    if request.method == 'POST':
+        form = HRScheduleForm(request.POST, instance=application)
+        if form.is_valid():
+            app = form.save(commit=False)
+            app.status = 'hr_scheduled'
+            app.save()
+            messages.success(request, f"HR interview scheduled for {app.hr_date}")
+            return redirect('job_applicants', pk=application.job.pk)
+    else:
+        form = HRScheduleForm(instance=application)
+    return render(request, 'core/schedule_hr.html', {
+        'application': application,
+        'form': form
+    })
+
+
+@require_hr
+def enter_hr_score(request, pk):
+    application = get_object_or_404(Application, pk=pk, job__hr=request.user)
+    if request.method == 'POST':
+        form = HRScoreForm(request.POST, instance=application)
+        if form.is_valid():
+            app = form.save(commit=False)
+            app.status = 'hr_completed'
+            app.save()
+            # Auto calculate final score
+            app.compute_final_score()
+            messages.success(request, "HR scores saved! Final score calculated.")
+            return redirect('job_applicants', pk=application.job.pk)
+    else:
+        form = HRScoreForm(instance=application)
+    return render(request, 'core/enter_hr_score.html', {
+        'application': application,
+        'form': form
+    })
+
+
+# ── Phase 8: Final Decision ───────────────────────────────────────────────────
+
+@require_hr
+def final_decision(request, pk):
+    application = get_object_or_404(Application, pk=pk, job__hr=request.user)
+    if request.method == 'POST':
+        form = FinalDecisionForm(request.POST, instance=application)
+        if form.is_valid():
+            app = form.save(commit=False)
+            app.status = app.final_decision
+            app.save()
+            messages.success(request, f"Final decision saved: {app.get_final_decision_display()}")
+            return redirect('job_applicants', pk=application.job.pk)
+    else:
+        form = FinalDecisionForm(instance=application)
+    return render(request, 'core/final_decision.html', {
+        'application': application,
+        'form': form
+    })
+
+
+@require_hr
+def application_detail_hr(request, pk):
+    application = get_object_or_404(Application, pk=pk, job__hr=request.user)
+    note_form = InterviewNoteForm()
+    if request.method == 'POST':
+        note_form = InterviewNoteForm(request.POST)
+        if note_form.is_valid():
+            note = note_form.save(commit=False)
+            note.application = application
+            note.created_by = request.user
+            note.save()
+            messages.success(request, "Note added!")
+            return redirect('application_detail_hr', pk=pk)
+    notes = application.notes.all().order_by('-created_at')
+    return render(request, 'core/application_detail_hr.html', {
+        'application': application,
+        'note_form': note_form,
+        'notes': notes,
+    })
 
 
 @require_hr
@@ -243,7 +352,8 @@ def hr_reports(request):
             'job': job,
             'total': apps.count(),
             'shortlisted': apps.filter(status='shortlisted').count(),
-            'in_interview': apps.filter(status__in=['hr_interview', 'technical_interview', 'final_interview']).count(),
+            'technical_attended': apps.filter(technical_attended=True).count(),
+            'hr_attended': apps.filter(hr_attended=True).count(),
             'selected': apps.filter(status='selected').count(),
             'rejected': apps.filter(status__in=['not_shortlisted', 'rejected']).count(),
         })
@@ -257,7 +367,9 @@ def candidate_dashboard(request):
     applications = Application.objects.filter(
         candidate=request.user
     ).select_related('job').order_by('-applied_at')
-    return render(request, 'core/candidate_dashboard.html', {'applications': applications})
+    return render(request, 'core/candidate_dashboard.html', {
+        'applications': applications
+    })
 
 
 @require_candidate
@@ -282,7 +394,6 @@ def apply_job(request, pk):
     if Application.objects.filter(job=job, candidate=request.user).exists():
         messages.warning(request, "You have already applied for this job.")
         return redirect('job_list')
-
     if request.method == 'POST':
         form = ResumeUploadForm(request.POST, request.FILES)
         if form.is_valid():
@@ -292,25 +403,20 @@ def apply_job(request, pk):
             application.status = 'applied'
             application.save()
             try:
-                process_application(application)
+                score = process_application(application)
                 rank_applicants_for_job(job)
-                messages.success(request, f"Application submitted! Your match score: {application.similarity_score:.2%}")
+                messages.success(request, f"Application submitted! Your match score: {score:.2%}")
             except Exception as e:
                 messages.success(request, "Application submitted! AI processing will run shortly.")
             return redirect('candidate_dashboard')
     else:
         form = ResumeUploadForm()
-
     return render(request, 'core/apply_job.html', {'job': job, 'form': form})
 
 
 @require_candidate
 def application_status(request, pk):
     application = get_object_or_404(Application, pk=pk, candidate=request.user)
-    notes = []
-    if application.can_see_interview():
-        notes = application.notes.all().order_by('-created_at')
     return render(request, 'core/application_status.html', {
         'application': application,
-        'notes': notes,
     })
