@@ -1,0 +1,61 @@
+{% extends 'core/base.html' %}
+{% block title %}Shortlist Candidate - RecruitAI{% endblock %}
+{% block content %}
+<div class="container" style="max-width:600px;">
+    <div class="page-header">
+        <h1>📋 Shortlist Decision</h1>
+        <p>Review and shortlist this candidate</p>
+    </div>
+    <div class="card">
+        <div style="background:#f8f9fa; border-radius:12px; padding:1rem; margin-bottom:1.5rem;">
+            <div style="font-weight:700; font-size:1.1rem; color:#1a1a2e;">
+                {{ application.candidate.get_full_name|default:application.candidate.username }}
+            </div>
+            <div style="color:#888; font-size:0.88rem; margin-top:0.3rem;">{{ application.candidate.email }}</div>
+            <div style="margin-top:0.5rem;">
+                Applied for: <strong>{{ application.job.title }}</strong>
+            </div>
+            {% if application.resume_score is not None %}
+            <div style="margin-top:0.5rem;">
+                🤖 Resume Match Score:
+                <strong style="color:{% if application.resume_score >= 0.6 %}#27ae60{% else %}#e74c3c{% endif %}">
+                    {{ application.resume_score|floatformat:2 }}
+                </strong>
+                {% if application.resume_score >= 0.6 %}
+                <span style="color:#27ae60;">✅ Above threshold</span>
+                {% else %}
+                <span style="color:#e74c3c;">❌ Below threshold</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Decision *</label>
+                <div style="display:flex; gap:1rem; margin-top:0.5rem;">
+                    <label style="flex:1; cursor:pointer; padding:1rem; border:2px solid #e8e8e8; border-radius:12px; text-align:center; transition:all 0.2s;">
+                        <input type="radio" name="status" value="shortlisted" style="display:none;"
+                            {% if application.status == 'shortlisted' %}checked{% endif %}>
+                        <div style="font-size:1.5rem;">✅</div>
+                        <div style="font-weight:600; color:#27ae60; margin-top:0.3rem;">Shortlist</div>
+                        <div style="font-size:0.78rem; color:#888;">Move to interview</div>
+                    </label>
+                    <label style="flex:1; cursor:pointer; padding:1rem; border:2px solid #e8e8e8; border-radius:12px; text-align:center; transition:all 0.2s;">
+                        <input type="radio" name="status" value="not_shortlisted" style="display:none;"
+                            {% if application.status == 'not_shortlisted' %}checked{% endif %}>
+                        <div style="font-size:1.5rem;">❌</div>
+                        <div style="font-weight:600; color:#e74c3c; margin-top:0.3rem;">Not Shortlisted</div>
+                        <div style="font-size:0.78rem; color:#888;">End process</div>
+                    </label>
+                </div>
+            </div>
+            <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1rem;">
+                <a href="{% url 'job_applicants' application.job.pk %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Decision</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

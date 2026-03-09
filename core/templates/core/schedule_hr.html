@@ -1,0 +1,37 @@
+{% extends 'core/base.html' %}
+{% block title %}Schedule HR Interview - RecruitAI{% endblock %}
+{% block content %}
+<div class="container" style="max-width:600px;">
+    <div class="page-header">
+        <h1>🤝 Schedule HR Interview</h1>
+        <p>Set the date for HR interview</p>
+    </div>
+    <div class="card">
+        <div style="background:#e8f4fd; border-radius:12px; padding:1rem; margin-bottom:1.5rem;">
+            <div style="font-weight:700; font-size:1.1rem;">
+                {{ application.candidate.get_full_name|default:application.candidate.username }}
+            </div>
+            <div style="color:#888; font-size:0.88rem;">{{ application.candidate.email }}</div>
+            <div style="margin-top:0.5rem;">Job: <strong>{{ application.job.title }}</strong></div>
+            {% if application.technical_score is not None %}
+            <div style="margin-top:0.3rem;">
+                💻 Technical Score: <strong>{{ application.technical_score }}/10</strong>
+            </div>
+            {% endif %}
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">📅 HR Interview Date *</label>
+                <input type="date" name="hr_date" class="form-control"
+                       value="{{ application.hr_date|default:'' }}" required>
+                <div class="form-text">Select the date for HR interview</div>
+            </div>
+            <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1rem;">
+                <a href="{% url 'job_applicants' application.job.pk %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">📅 Schedule HR Interview</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
