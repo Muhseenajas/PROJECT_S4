@@ -127,8 +127,26 @@
         <div class="grid-3">
             <div style="background:#f8f9fa; border-radius:10px; padding:1rem;">
                 <div style="font-size:0.8rem; color:#888;">📅 Scheduled Date</div>
-                <div style="font-weight:600; margin-top:0.3rem;">{{ application.technical_date|default:"Not set" }}</div>
+                <div style="font-weight:600; margin-top:0.3rem;">
+                    {{ application.technical_date|default:"Not set" }}
+                </div>
             </div>
+            <div style="background:#f8f9fa; border-radius:10px; padding:1rem;">
+                <div style="font-size:0.8rem; color:#888;">🕐 Scheduled Time</div>
+                <div style="font-weight:600; margin-top:0.3rem;">
+                    {% if application.technical_time %}
+                        {{ application.technical_time|time:"h:i A" }}
+                    {% else %}—{% endif %}
+                </div>
+            </div>
+            <div style="background:#f8f9fa; border-radius:10px; padding:1rem;">
+                <div style="font-size:0.8rem; color:#888;">👤 Interviewer</div>
+                <div style="font-weight:600; margin-top:0.3rem;">
+                    {{ application.technical_interviewer|default:"—" }}
+                </div>
+            </div>
+        </div>
+        <div class="grid-3" style="margin-top:0.75rem;">
             <div style="background:#f8f9fa; border-radius:10px; padding:1rem;">
                 <div style="font-size:0.8rem; color:#888;">✅ Attended</div>
                 <div style="font-weight:600; margin-top:0.3rem;">
@@ -140,7 +158,9 @@
             <div style="background:#f8f9fa; border-radius:10px; padding:1rem;">
                 <div style="font-size:0.8rem; color:#888;">🎯 Score</div>
                 <div style="font-weight:600; margin-top:0.3rem;">
-                    {% if application.technical_score is not None %}{{ application.technical_score }}/10{% else %}—{% endif %}
+                    {% if application.technical_score is not None %}
+                        {{ application.technical_score }}/10
+                    {% else %}—{% endif %}
                 </div>
             </div>
         </div>
@@ -160,8 +180,26 @@
         <div class="grid-3">
             <div style="background:#f8f9fa; border-radius:10px; padding:1rem;">
                 <div style="font-size:0.8rem; color:#888;">📅 Scheduled Date</div>
-                <div style="font-weight:600; margin-top:0.3rem;">{{ application.hr_date|default:"Not set" }}</div>
+                <div style="font-weight:600; margin-top:0.3rem;">
+                    {{ application.hr_date|default:"Not set" }}
+                </div>
             </div>
+            <div style="background:#f8f9fa; border-radius:10px; padding:1rem;">
+                <div style="font-size:0.8rem; color:#888;">🕐 Scheduled Time</div>
+                <div style="font-weight:600; margin-top:0.3rem;">
+                    {% if application.hr_time %}
+                        {{ application.hr_time|time:"h:i A" }}
+                    {% else %}—{% endif %}
+                </div>
+            </div>
+            <div style="background:#f8f9fa; border-radius:10px; padding:1rem;">
+                <div style="font-size:0.8rem; color:#888;">👤 Interviewer</div>
+                <div style="font-weight:600; margin-top:0.3rem;">
+                    {{ application.hr_interviewer|default:"—" }}
+                </div>
+            </div>
+        </div>
+        <div class="grid-3" style="margin-top:0.75rem;">
             <div style="background:#f8f9fa; border-radius:10px; padding:1rem;">
                 <div style="font-size:0.8rem; color:#888;">✅ Attended</div>
                 <div style="font-weight:600; margin-top:0.3rem;">
@@ -173,7 +211,9 @@
             <div style="background:#f8f9fa; border-radius:10px; padding:1rem;">
                 <div style="font-size:0.8rem; color:#888;">🎯 Score</div>
                 <div style="font-weight:600; margin-top:0.3rem;">
-                    {% if application.hr_score is not None %}{{ application.hr_score }}/10{% else %}—{% endif %}
+                    {% if application.hr_score is not None %}
+                        {{ application.hr_score }}/10
+                    {% else %}—{% endif %}
                 </div>
             </div>
         </div>
@@ -186,45 +226,5 @@
     </div>
     {% endif %}
 
-    <!-- Interview Notes -->
-    <div class="card">
-        <div class="card-title">📝 Interview Notes</div>
-        <form method="post" style="margin-bottom:1.5rem; padding-bottom:1.5rem; border-bottom:1px solid #f0f0f0;">
-            {% csrf_token %}
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Stage</label>
-                    <input type="text" name="stage" class="form-control" placeholder="e.g. Technical Round, HR Interview">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Score (optional)</label>
-                    <input type="number" name="score" class="form-control" min="0" max="10" step="0.1">
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Note</label>
-                <textarea name="note" class="form-control" rows="2" placeholder="Observations, feedback..."></textarea>
-            </div>
-            <button type="submit" name="add_note" class="btn btn-success btn-sm">+ Add Note</button>
-        </form>
-        {% if notes %}
-        <div class="timeline">
-            {% for note in notes %}
-            <div class="timeline-item">
-                <div class="timeline-dot active"></div>
-                <div class="timeline-content">
-                    <div class="timeline-title">{{ note.stage }}
-                        {% if note.score is not None %} — Score: <strong>{{ note.score }}/10</strong>{% endif %}
-                    </div>
-                    <div style="margin-top:0.4rem; font-size:0.88rem; color:#555;">{{ note.note }}</div>
-                    <div class="timeline-date">{{ note.created_at|date:"M d, Y H:i" }} by {{ note.created_by.get_full_name }}</div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <p style="color:#aaa; font-size:0.9rem;">No notes yet.</p>
-        {% endif %}
-    </div>
 </div>
 {% endblock %}

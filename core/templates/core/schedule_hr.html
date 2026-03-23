@@ -4,7 +4,7 @@
 <div class="container" style="max-width:600px;">
     <div class="page-header">
         <h1>🤝 Schedule HR Interview</h1>
-        <p>Set the date for HR interview</p>
+        <p>Set the date, time and interviewer for HR interview</p>
     </div>
     <div class="card">
         <div style="background:#e8f4fd; border-radius:12px; padding:1rem; margin-bottom:1.5rem;">
@@ -21,12 +21,31 @@
         </div>
         <form method="post">
             {% csrf_token %}
+
+            <!-- Date -->
             <div class="form-group">
-                <label class="form-label">📅 HR Interview Date *</label>
+                <label class="form-label">📅 Interview Date *</label>
                 <input type="date" name="hr_date" class="form-control"
                        value="{{ application.hr_date|default:'' }}" required>
-                <div class="form-text">Select the date for HR interview</div>
             </div>
+
+            <!-- Time -->
+            <div class="form-group">
+                <label class="form-label">🕐 Interview Time *</label>
+                <input type="time" name="hr_time" class="form-control"
+                       value="{% if application.hr_time %}{{ application.hr_time|time:'H:i' }}{% endif %}" required>
+                <div class="form-text">Select the scheduled time for the interview</div>
+            </div>
+
+            <!-- Interviewer -->
+            <div class="form-group">
+                <label class="form-label">👤 Interviewer Name *</label>
+                <input type="text" name="hr_interviewer" class="form-control"
+                       value="{{ application.hr_interviewer|default:'' }}"
+                       placeholder="Enter interviewer full name" required>
+                <div class="form-text">Name of the HR person conducting the interview</div>
+            </div>
+
             <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1rem;">
                 <a href="{% url 'job_applicants' application.job.pk %}" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">📅 Schedule HR Interview</button>

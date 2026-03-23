@@ -6,7 +6,8 @@ class UserProfile(models.Model):
     ROLE_CHOICES = [('hr', 'HR/Admin'), ('candidate', 'Candidate')]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    phone = models.CharField(max_length=20, blank=True)
+    phone = models.CharField(max_length=10, blank=True)
+    profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -17,6 +18,11 @@ class UserProfile(models.Model):
 
     def is_candidate(self):
         return self.role == 'candidate'
+
+    def get_profile_image(self):
+        if self.profile_image:
+            return self.profile_image.url
+        return None
 
 
 class Job(models.Model):
@@ -78,12 +84,16 @@ class Application(models.Model):
 
     # Phase 5 - Technical Interview
     technical_date = models.DateField(null=True, blank=True)
+    technical_time = models.TimeField(null=True, blank=True)
+    technical_interviewer = models.CharField(max_length=100, blank=True)
     technical_score = models.FloatField(null=True, blank=True)
     technical_attended = models.BooleanField(null=True, blank=True)
     technical_feedback = models.TextField(blank=True)
 
     # Phase 6 - HR Interview
     hr_date = models.DateField(null=True, blank=True)
+    hr_time = models.TimeField(null=True, blank=True)
+    hr_interviewer = models.CharField(max_length=100, blank=True)
     hr_score = models.FloatField(null=True, blank=True)
     hr_attended = models.BooleanField(null=True, blank=True)
     hr_feedback = models.TextField(blank=True)
@@ -108,9 +118,6 @@ class Application(models.Model):
         return f"{self.candidate.username} → {self.job.title}"
 
     def compute_final_score(self):
-        """
-        Final Score = (0.6 × Resume Score) + (0.3 × Technical Score) + (0.1 × HR Score)
-        """
         if (self.resume_score is not None and
                 self.technical_score is not None and
                 self.hr_score is not None):
@@ -119,7 +126,6 @@ class Application(models.Model):
                 (0.3 * (self.technical_score / 10)) +
                 (0.1 * (self.hr_score / 10))
             )
-            # Auto system recommendation
             if self.final_score >= 0.6:
                 self.system_recommendation = 'selected'
             else:

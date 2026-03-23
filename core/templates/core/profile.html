@@ -8,10 +8,24 @@
     </div>
     <div class="card">
         <div style="text-align:center; margin-bottom:1.5rem;">
+
+            <!-- Profile Image or Initials Avatar -->
+            {% if profile.profile_image %}
+            <div style="margin-bottom:1rem;">
+                <img src="{{ profile.profile_image.url }}"
+                     alt="Profile Picture"
+                     style="width:100px; height:100px; border-radius:50%; object-fit:cover;
+                            border:3px solid #e94560; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+            </div>
+            {% else %}
             <div class="profile-avatar">
                 {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
             </div>
-            <div style="font-size:1.3rem; font-weight:700; color:#1a1a2e;">{{ user.get_full_name|default:user.username }}</div>
+            {% endif %}
+
+            <div style="font-size:1.3rem; font-weight:700; color:#1a1a2e;">
+                {{ user.get_full_name|default:user.username }}
+            </div>
             <div style="margin-top:0.4rem;">
                 {% if profile.is_hr %}
                 <span class="badge" style="background:#e8f4fd; color:#2980b9; font-size:0.85rem;">👩‍💼 HR / Admin</span>
@@ -20,6 +34,7 @@
                 {% endif %}
             </div>
         </div>
+
         <div style="border-top:1px solid #f0f0f0; padding-top:1rem;">
             <div class="profile-info-row">
                 <div class="profile-info-label">👤 Username</div>
@@ -50,6 +65,7 @@
                 <div class="profile-info-value">{{ user.date_joined|date:"M d, Y" }}</div>
             </div>
         </div>
+
         <div style="display:flex; gap:1rem; margin-top:1.5rem; justify-content:flex-end;">
             <a href="{% url 'dashboard' %}" class="btn btn-secondary">← Back</a>
             <a href="{% url 'edit_profile' %}" class="btn btn-primary">✏️ Edit Profile</a>

@@ -6,10 +6,10 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from .models import UserProfile, Job, Application, InterviewNote
+from .models import UserProfile, Job, Application
 from .forms import (
     RegisterForm, ProfileUpdateForm, JobForm,
-    ResumeUploadForm, InterviewNoteForm,
+    ResumeUploadForm,
     ShortlistForm, TechnicalScheduleForm, TechnicalScoreForm,
     HRScheduleForm, HRScoreForm, FinalDecisionForm
 )
@@ -96,7 +96,7 @@ def view_profile(request):
 def edit_profile(request):
     profile = getattr(request.user, 'profile', None)
     if request.method == 'POST':
-        form = ProfileUpdateForm(request.POST, instance=request.user, profile=profile)
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user, profile=profile)
         if form.is_valid():
             form.save()
             messages.success(request, "Profile updated successfully!")
@@ -109,24 +109,57 @@ def edit_profile(request):
 # ── HR Views ─────────────────────────────────────────────────────────────────
 
 @require_hr
+@require_hr
 def hr_dashboard(request):
     jobs = Job.objects.filter(hr=request.user).annotate(
         total=Count('applications'),
-        shortlisted=Count('applications', filter=Q(applications__status='shortlisted')),
+        shortlisted=Count('applications', filter=Q(
+            applications__status__in=[
+                'shortlisted',
+                'technical_scheduled',
+                'technical_completed',
+                'hr_scheduled',
+                'hr_completed',
+                'system_recommended',
+                'selected',
+            ]
+        )),
         selected=Count('applications', filter=Q(applications__status='selected')),
     )
     total_apps = Application.objects.filter(job__hr=request.user).count()
-    shortlisted = Application.objects.filter(job__hr=request.user, status='shortlisted').count()
+    shortlisted = Application.objects.filter(
+        job__hr=request.user,
+        status__in=[
+            'shortlisted',
+            'technical_scheduled',
+            'technical_completed',
+            'hr_scheduled',
+            'hr_completed',
+            'system_recommended',
+            'selected',
+        ]
+    ).count()
     technical_attended = Application.objects.filter(
-        job__hr=request.user, status__in=['technical_completed', 'hr_scheduled', 'hr_completed', 'system_recommended', 'selected', 'rejected'],
+        job__hr=request.user,
+        status__in=[
+            'technical_completed', 'hr_scheduled', 'hr_completed',
+            'system_recommended', 'selected', 'rejected'
+        ],
         technical_attended=True
     ).count()
     hr_attended = Application.objects.filter(
-        job__hr=request.user, status__in=['hr_completed', 'system_recommended', 'selected', 'rejected'],
+        job__hr=request.user,
+        status__in=[
+            'hr_completed', 'system_recommended', 'selected', 'rejected'
+        ],
         hr_attended=True
     ).count()
-    selected = Application.objects.filter(job__hr=request.user, status='selected').count()
-    rejected = Application.objects.filter(job__hr=request.user, status__in=['not_shortlisted', 'rejected']).count()
+    selected = Application.objects.filter(
+        job__hr=request.user, status='selected'
+    ).count()
+    rejected = Application.objects.filter(
+        job__hr=request.user, status__in=['not_shortlisted', 'rejected']
+    ).count()
 
     context = {
         'jobs': jobs,
@@ -138,7 +171,6 @@ def hr_dashboard(request):
         'rejected': rejected,
     }
     return render(request, 'core/hr_dashboard.html', context)
-
 
 @require_hr
 def create_job(request):
@@ -322,23 +354,11 @@ def final_decision(request, pk):
 
 
 @require_hr
+@require_hr
 def application_detail_hr(request, pk):
     application = get_object_or_404(Application, pk=pk, job__hr=request.user)
-    note_form = InterviewNoteForm()
-    if request.method == 'POST':
-        note_form = InterviewNoteForm(request.POST)
-        if note_form.is_valid():
-            note = note_form.save(commit=False)
-            note.application = application
-            note.created_by = request.user
-            note.save()
-            messages.success(request, "Note added!")
-            return redirect('application_detail_hr', pk=pk)
-    notes = application.notes.all().order_by('-created_at')
     return render(request, 'core/application_detail_hr.html', {
         'application': application,
-        'note_form': note_form,
-        'notes': notes,
     })
 
 

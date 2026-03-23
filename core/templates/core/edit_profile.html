@@ -7,38 +7,106 @@
         <p>Update your personal information</p>
     </div>
     <div class="card">
-        <form method="post">
+
+        <!-- Current Profile Image Preview -->
+        <div style="text-align:center; margin-bottom:1.5rem;">
+            {% if profile.profile_image %}
+            <img src="{{ profile.profile_image.url }}"
+                 alt="Profile Picture"
+                 id="imagePreview"
+                 style="width:100px; height:100px; border-radius:50%; object-fit:cover;
+                        border:3px solid #e94560; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+            {% else %}
+            <div class="profile-avatar" id="avatarInitials">
+                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+            </div>
+            <img id="imagePreview"
+                 style="display:none; width:100px; height:100px; border-radius:50%;
+                        object-fit:cover; border:3px solid #e94560;">
+            {% endif %}
+            <div style="font-size:0.85rem; color:#888; margin-top:0.5rem;">
+                Click below to change profile picture
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
+
+            <!-- Profile Image Upload -->
+            <div class="form-group">
+                <label class="form-label">📷 Profile Picture</label>
+                <input type="file" name="profile_image" class="form-control"
+                       accept="image/*" id="profileImageInput"
+                       onchange="previewImage(this)">
+                <div class="form-text">JPG, PNG or GIF — Max 2MB</div>
+            </div>
+
             <div class="grid-2">
                 <div class="form-group">
                     <label class="form-label">First Name</label>
-                    <input type="text" name="first_name" class="form-control" value="{{ form.first_name.value|default:'' }}" required>
+                    <input type="text" name="first_name" class="form-control"
+                           value="{{ form.first_name.value|default:'' }}" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Last Name</label>
-                    <input type="text" name="last_name" class="form-control" value="{{ form.last_name.value|default:'' }}" required>
+                    <input type="text" name="last_name" class="form-control"
+                           value="{{ form.last_name.value|default:'' }}" required>
                 </div>
             </div>
+
             <div class="form-group">
                 <label class="form-label">Email</label>
-                <input type="email" name="email" class="form-control" value="{{ form.email.value|default:'' }}" required>
+                <input type="email" name="email" class="form-control"
+                       value="{{ form.email.value|default:'' }}" required>
             </div>
+
             <div class="form-group">
                 <label class="form-label">Phone Number</label>
-                <input type="text" name="phone" class="form-control" value="{{ form.phone.value|default:'' }}" placeholder="+91-9876543210">
+                <input type="text" name="phone" class="form-control"
+                       value="{{ form.phone.value|default:'' }}"
+                       placeholder="Enter 10 digit phone number"
+                       maxlength="10">
+                <div class="form-text">Enter exactly 10 digits</div>
             </div>
+
             {% if form.errors %}
             <div class="alert alert-danger">
                 {% for field, errors in form.errors.items %}
-                    {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+                    {% for error in errors %}<div>⚠️ {{ error }}</div>{% endfor %}
                 {% endfor %}
             </div>
             {% endif %}
+
             <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1rem;">
                 <a href="{% url 'view_profile' %}" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="submit" class="btn btn-primary">💾 Save Changes</button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- Image Preview Script -->
+<script>
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Show preview image
+            const preview = document.getElementById('imagePreview');
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            preview.style.width = '100px';
+            preview.style.height = '100px';
+            preview.style.borderRadius = '50%';
+            preview.style.objectFit = 'cover';
+            preview.style.border = '3px solid #e94560';
+
+            // Hide initials avatar if exists
+            const avatar = document.getElementById('avatarInitials');
+            if (avatar) avatar.style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
 {% endblock %}

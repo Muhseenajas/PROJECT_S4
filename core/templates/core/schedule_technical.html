@@ -4,7 +4,7 @@
 <div class="container" style="max-width:600px;">
     <div class="page-header">
         <h1>💻 Schedule Technical Interview</h1>
-        <p>Set the date for technical interview</p>
+        <p>Set the date, time and interviewer for technical interview</p>
     </div>
     <div class="card">
         <div style="background:#f8f9fa; border-radius:12px; padding:1rem; margin-bottom:1.5rem;">
@@ -21,12 +21,31 @@
         </div>
         <form method="post">
             {% csrf_token %}
+
+            <!-- Date -->
             <div class="form-group">
-                <label class="form-label">📅 Technical Interview Date *</label>
+                <label class="form-label">📅 Interview Date *</label>
                 <input type="date" name="technical_date" class="form-control"
                        value="{{ application.technical_date|default:'' }}" required>
-                <div class="form-text">Select the date for technical interview</div>
             </div>
+
+            <!-- Time -->
+            <div class="form-group">
+                <label class="form-label">🕐 Interview Time *</label>
+                <input type="time" name="technical_time" class="form-control"
+                       value="{% if application.technical_time %}{{ application.technical_time|time:'H:i' }}{% endif %}" required>
+                <div class="form-text">Select the scheduled time for the interview</div>
+            </div>
+
+            <!-- Interviewer -->
+            <div class="form-group">
+                <label class="form-label">👤 Interviewer Name *</label>
+                <input type="text" name="technical_interviewer" class="form-control"
+                       value="{{ application.technical_interviewer|default:'' }}"
+                       placeholder="Enter interviewer full name" required>
+                <div class="form-text">Name of the person conducting the technical interview</div>
+            </div>
+
             <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1rem;">
                 <a href="{% url 'job_applicants' application.job.pk %}" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">📅 Schedule Interview</button>
