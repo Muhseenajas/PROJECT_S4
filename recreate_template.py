@@ -1,4 +1,7 @@
-{% extends 'core/base.html' %}
+#!/usr/bin/env python3
+"""Recreate enter_hr_score.html with proper content"""
+
+template_content = """{% extends 'core/base.html' %}
 {% block title %}HR Interview Score - RecruitAI{% endblock %}
 {% block content %}
 <div class="container" style="max-width:600px;">
@@ -58,4 +61,9 @@
         </form>
     </div>
 </div>
-{% endblock %}
+{% endblock %}"""
+
+with open(r"c:\Users\muhseena\Desktop\AI\recruitment_ai\core\templates\core\enter_hr_score.html", 'w', encoding='utf-8') as f:
+    f.write(template_content)
+
+print("✅ enter_hr_score.html recreated successfully!")

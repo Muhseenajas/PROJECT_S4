@@ -427,7 +427,10 @@ def apply_job(request, pk):
                 rank_applicants_for_job(job)
                 messages.success(request, f"Application submitted! Your match score: {score:.2%}")
             except Exception as e:
-                messages.success(request, "Application submitted! AI processing will run shortly.")
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"AI processing error: {str(e)}", exc_info=True)
+                messages.warning(request, f"Application submitted! AI processing failed: {str(e)}")
             return redirect('candidate_dashboard')
     else:
         form = ResumeUploadForm()

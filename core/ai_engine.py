@@ -135,6 +135,9 @@ def compute_similarity(job_text: str, resume_text: str) -> float:
     3. Compute cosine similarity
     Returns similarity score (0–1).
     """
+    if not job_text or not resume_text:
+        logger.warning(f"Empty text provided: job_len={len(job_text) if job_text else 0}, resume_len={len(resume_text) if resume_text else 0}")
+        return 0.0
     job_embedding = generate_embedding(job_text)
     resume_embedding = generate_embedding(resume_text)
     score = cosine_similarity(job_embedding, resume_embedding)
@@ -165,24 +168,36 @@ def process_application(application) -> float:
     from django.conf import settings
     import os
 
-    # Extract resume text if needed
-    if not application.resume_text:
-        file_path = os.path.join(settings.MEDIA_ROOT, str(application.resume))
-        application.resume_text = extract_resume_text(file_path)
+    try:
+        # Extract resume text if needed
+        if not application.resume_text:
+            file_path = os.path.join(settings.MEDIA_ROOT, str(application.resume))
+            logger.info(f"Extracting text from: {file_path}")
+            application.resume_text = extract_resume_text(file_path)
+            if not application.resume_text:
+                logger.warning(f"No text extracted from resume for app {application.id}")
+                return 0.0
+            logger.info(f"Resume text extracted: {len(application.resume_text)} chars")
 
-    # Get job text
-    job_text = get_job_full_text(application.job)
+        # Get job text
+        job_text = get_job_full_text(application.job)
+        logger.info(f"Job text prepared: {len(job_text)} chars")
 
-    # Compute similarity
-    score = compute_similarity(job_text, application.resume_text)
-    application.similarity_score = score
+        # Compute similarity
+        score = compute_similarity(job_text, application.resume_text)
+        logger.info(f"Similarity score computed: {score}")
+        application.resume_score = score
 
-    # Auto-shortlist
-    if application.status == 'applied':
-        application.status = determine_status(score)
+        # Auto-shortlist
+        if application.status == 'applied':
+            application.status = determine_status(score)
 
-    application.save()
-    return score
+        application.save()
+        logger.info(f"Application {application.id} processed with score: {score}")
+        return score
+    except Exception as e:
+        logger.error(f"Error processing application {application.id}: {str(e)}", exc_info=True)
+        raise
 
 
 def rank_applicants_for_job(job) -> list:
@@ -192,7 +207,7 @@ def rank_applicants_for_job(job) -> list:
     Updates rank field for each application.
     """
     applications = list(job.applications.all())
-    applications.sort(key=lambda a: a.similarity_score or 0, reverse=True)
+    applications.sort(key=lambda a: a.resume_score or 0, reverse=True)
 
     for rank, app in enumerate(applications, start=1):
         app.rank = rank
