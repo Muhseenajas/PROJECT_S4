@@ -111,7 +111,6 @@ def edit_profile(request):
 # ── HR Views ─────────────────────────────────────────────────────────────────
 
 @require_hr
-@require_hr
 def hr_dashboard(request):
     jobs = Job.objects.filter(hr=request.user).annotate(
         total=Count('applications'),
@@ -400,16 +399,32 @@ def final_decision(request, pk):
 
     if request.method == 'POST':
         form = FinalDecisionForm(request.POST, instance=application)
+
         if form.is_valid():
+
+            # ✅ FORCE decision (prevents NULL error)
             app = form.save(commit=False)
-            app.status = app.final_decision
+
+            # ✅ get correct value from form
+            decision = form.cleaned_data.get('final_decision')
+
+            # ✅ fallback safety
+            if not decision:
+                decision = 'rejected'
+
+            # ✅ assign status
+            if decision == 'selected':
+                app.status = 'selected'
+            else:
+                app.status = 'rejected'
+
             app.save()
 
-            # 📩 SEND EMAIL HERE
+            # 📩 SEND EMAIL
             candidate_email = app.candidate.email
 
             if candidate_email:
-                if app.final_decision == 'selected':
+                if decision == 'selected':
                     subject = f"Congratulations! You are Selected - {app.job.title}"
                     message = (
                         f"Dear {app.candidate.first_name or app.candidate.username},\n\n"
@@ -442,7 +457,6 @@ def final_decision(request, pk):
                     messages.success(request, "Final decision saved and email sent!")
                 except Exception as e:
                     messages.warning(request, f"Decision saved, but email failed: {e}")
-
             else:
                 messages.warning(request, "Candidate email not found!")
 

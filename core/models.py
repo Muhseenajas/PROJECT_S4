@@ -74,7 +74,13 @@ class Application(models.Model):
     candidate = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications')
     resume = models.FileField(upload_to='resumes/')
     resume_text = models.TextField(blank=True)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='applied')
+    status = models.CharField(
+    max_length=30,
+    choices=STATUS_CHOICES,
+    default='applied',
+    null=False,
+    blank=False
+)    
     rank = models.IntegerField(null=True, blank=True)
     applied_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
