@@ -80,3 +80,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+# Email settings for interview notifications (development default)
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'hr@recruitment-ai.local'
+
+# For production, configure your SMTP server:
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'muhseenajas2003@gmail.com'
+EMAIL_HOST_PASSWORD = 'evgf zdpv rdrj vwze'
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'EMAIL_HOST_USER'
+

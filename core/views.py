@@ -5,6 +5,8 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db.models import Count, Q
 from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
 
 from .models import UserProfile, Job, Application
 from .forms import (
@@ -261,7 +263,28 @@ def schedule_technical(request, pk):
             app = form.save(commit=False)
             app.status = 'technical_scheduled'
             app.save()
-            messages.success(request, f"Technical interview scheduled for {app.technical_date}")
+
+            # Send notification email to candidate
+            candidate_email = app.candidate.email
+            if candidate_email:
+                subject = f"Technical Interview Scheduled - {app.job.title}"
+                message = (
+                    f"Dear {app.candidate.first_name or app.candidate.username},\n\n"
+                    f"Congratulations! You have been selected for the technical interview for the role '{app.job.title}'.\n"
+                    f"Interview Date: {app.technical_date.strftime('%Y-%m-%d') if app.technical_date else 'TBD'}\n"
+                    f"Interview Time: {app.technical_time.strftime('%H:%M') if app.technical_time else 'TBD'}\n"
+                    f"Interviewer: {app.technical_interviewer or 'TBD'}\n\n"
+                    f"Please be ready and join on time. We look forward to speaking with you.\n\n"
+                    f"Best regards,\n{app.job.hr.get_full_name() or app.job.hr.username}"
+                )
+                try:
+                    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [candidate_email], fail_silently=False)
+                    messages.success(request, f"Technical interview scheduled and email sent to {candidate_email}.")
+                except Exception as e:
+                    messages.warning(request, f"Technical interview scheduled, but email could not be sent: {e}")
+            else:
+                messages.warning(request, "Technical interview scheduled, but candidate has no email address on file.")
+
             return redirect('job_applicants', pk=application.job.pk)
     else:
         form = TechnicalScheduleForm(instance=application)
@@ -295,13 +318,50 @@ def enter_technical_score(request, pk):
 @require_hr
 def schedule_hr_interview(request, pk):
     application = get_object_or_404(Application, pk=pk, job__hr=request.user)
+
+    # Enforce order: technical interview must be completed first
+    if application.status != 'technical_completed':
+        messages.error(request, "Candidate must complete the technical interview before scheduling HR interview.")
+        return redirect('job_applicants', pk=application.job.pk)
+
+    # Enforce minimum technical score: must score at least 5.0 out of 10 to pass
+    MIN_TECHNICAL_SCORE = 5.0
+    if application.technical_score is None or application.technical_score < MIN_TECHNICAL_SCORE:
+        messages.error(
+            request,
+            f"Candidate scored {application.technical_score or 'N/A'}/10. Minimum required score is {MIN_TECHNICAL_SCORE}/10 to proceed to HR interview."
+        )
+        return redirect('job_applicants', pk=application.job.pk)
+
     if request.method == 'POST':
         form = HRScheduleForm(request.POST, instance=application)
         if form.is_valid():
             app = form.save(commit=False)
             app.status = 'hr_scheduled'
             app.save()
-            messages.success(request, f"HR interview scheduled for {app.hr_date}")
+
+            # Send notification email to candidate
+            candidate_email = app.candidate.email
+            if candidate_email:
+                subject = f"HR Interview Scheduled - {app.job.title}"
+                message = (
+                    f"Dear {app.candidate.first_name or app.candidate.username},\n\n"
+                    f"Congratulations! You have passed the technical interview and been selected for the HR interview for the role '{app.job.title}'.\n"
+                    f"Your Technical Score: {app.technical_score}/10\n\n"
+                    f"HR Interview Date: {app.hr_date.strftime('%Y-%m-%d') if app.hr_date else 'TBD'}\n"
+                    f"HR Interview Time: {app.hr_time.strftime('%H:%M') if app.hr_time else 'TBD'}\n"
+                    f"Interviewer: {app.hr_interviewer or 'TBD'}\n\n"
+                    f"Please be ready and join on time. We look forward to speaking with you soon.\n\n"
+                    f"Best regards,\n{app.job.hr.get_full_name() or app.job.hr.username}"
+                )
+                try:
+                    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [candidate_email], fail_silently=False)
+                    messages.success(request, f"HR interview scheduled and congratulation email sent to {candidate_email}.")
+                except Exception as e:
+                    messages.warning(request, f"HR interview scheduled, but email could not be sent: {e}")
+            else:
+                messages.warning(request, "HR interview scheduled, but candidate has no email address on file.")
+
             return redirect('job_applicants', pk=application.job.pk)
     else:
         form = HRScheduleForm(instance=application)
@@ -337,23 +397,65 @@ def enter_hr_score(request, pk):
 @require_hr
 def final_decision(request, pk):
     application = get_object_or_404(Application, pk=pk, job__hr=request.user)
+
     if request.method == 'POST':
         form = FinalDecisionForm(request.POST, instance=application)
         if form.is_valid():
             app = form.save(commit=False)
             app.status = app.final_decision
             app.save()
-            messages.success(request, f"Final decision saved: {app.get_final_decision_display()}")
+
+            # 📩 SEND EMAIL HERE
+            candidate_email = app.candidate.email
+
+            if candidate_email:
+                if app.final_decision == 'selected':
+                    subject = f"Congratulations! You are Selected - {app.job.title}"
+                    message = (
+                        f"Dear {app.candidate.first_name or app.candidate.username},\n\n"
+                        f"Congratulations! 🎉\n\n"
+                        f"You have been selected for the role '{app.job.title}'.\n\n"
+                        f"Final Score: {app.final_score:.2f}\n\n"
+                        f"Our HR team will contact you soon.\n\n"
+                        f"Best regards,\n"
+                        f"{app.job.hr.get_full_name() or app.job.hr.username}"
+                    )
+                else:
+                    subject = f"Application Update - {app.job.title}"
+                    message = (
+                        f"Dear {app.candidate.first_name or app.candidate.username},\n\n"
+                        f"Thank you for applying for '{app.job.title}'.\n\n"
+                        f"We regret to inform you that you were not selected.\n\n"
+                        f"Best wishes for your future.\n\n"
+                        f"Best regards,\n"
+                        f"{app.job.hr.get_full_name() or app.job.hr.username}"
+                    )
+
+                try:
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [candidate_email],
+                        fail_silently=False
+                    )
+                    messages.success(request, "Final decision saved and email sent!")
+                except Exception as e:
+                    messages.warning(request, f"Decision saved, but email failed: {e}")
+
+            else:
+                messages.warning(request, "Candidate email not found!")
+
             return redirect('job_applicants', pk=application.job.pk)
+
     else:
         form = FinalDecisionForm(instance=application)
+
     return render(request, 'core/final_decision.html', {
         'application': application,
         'form': form
     })
 
-
-@require_hr
 @require_hr
 def application_detail_hr(request, pk):
     application = get_object_or_404(Application, pk=pk, job__hr=request.user)

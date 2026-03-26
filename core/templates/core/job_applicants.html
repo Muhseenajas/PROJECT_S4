@@ -125,7 +125,13 @@
                                 <a href="{% url 'enter_technical_score' app.pk %}" class="btn btn-success btn-sm">📝 Tech Score</a>
 
                                 {% elif app.status == 'technical_completed' %}
+                                {% if app.technical_score >= 5.0 %}
                                 <a href="{% url 'schedule_hr_interview' app.pk %}" class="btn btn-primary btn-sm">📅 Schedule HR</a>
+                                {% else %}
+                                <span style="color:#e74c3c; font-size:0.8rem;" title="Minimum required: 5.0/10">
+                                    Score: {{ app.technical_score }}/10 (too low)
+                                </span>
+                                {% endif %}
 
                                 {% elif app.status == 'hr_scheduled' %}
                                 <a href="{% url 'enter_hr_score' app.pk %}" class="btn btn-success btn-sm">📝 HR Score</a>
