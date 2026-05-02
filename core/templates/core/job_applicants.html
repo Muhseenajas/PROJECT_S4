@@ -1,164 +1,571 @@
 {% extends 'core/base.html' %}
 {% block title %}Applicants - {{ job.title }} - RecruitAI{% endblock %}
+
 {% block content %}
 <div class="container">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2rem; flex-wrap:wrap; gap:1rem;">
-        <div>
-            <h1 style="font-size:1.6rem; color:#1a1a2e; font-weight:700;">{{ job.title }}</h1>
-            <p style="color:#888;">{{ applications|length }} applicant(s) &nbsp;|&nbsp; Experience: {{ job.required_experience }}</p>
-            <div style="margin-top:0.5rem;">
-                {% for skill in job.get_skills_list %}
-                <span class="skill-tag">{{ skill }}</span>
-                {% endfor %}
+
+    <!-- HEADER -->
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        margin-bottom:2rem;
+        flex-wrap:wrap;
+        gap:1.5rem;
+    ">
+
+        <!-- LEFT -->
+        <div style="max-width:900px; flex:1;">
+
+            <h1 style="
+                font-size:1.9rem;
+                color:#1a1a2e;
+                font-weight:800;
+                margin-bottom:0.5rem;
+            ">
+                {{ job.title }}
+            </h1>
+
+            <p style="
+                color:#777;
+                margin-bottom:1rem;
+                font-size:0.95rem;
+            ">
+                {{ applications|length }} applicant(s)
+                &nbsp; | &nbsp;
+                Experience: {{ job.required_experience }}
+            </p>
+
+            <!-- DESCRIPTION -->
+            <div style="
+                background:#f8f9fc;
+                border-left:4px solid #6c63ff;
+                padding:1rem 1.2rem;
+                border-radius:12px;
+                margin-bottom:1rem;
+            ">
+
+                <div style="
+                    font-weight:700;
+                    color:#1a1a2e;
+                    margin-bottom:0.7rem;
+                    font-size:0.95rem;
+                ">
+                    Required Skills & Qualifications
+                </div>
+
+                <div style="
+                    color:#555;
+                    line-height:1.8;
+                    font-size:0.93rem;
+                    word-break:break-word;
+                    white-space:pre-line;
+                ">
+                    {{ job.description }}
+                </div>
+
             </div>
+
+            <!-- SKILLS -->
+            <div style="
+                display:flex;
+                flex-wrap:wrap;
+                gap:0.5rem;
+            ">
+
+                {% for skill in job.get_skills_list %}
+
+                <span class="skill-tag">
+                    {{ skill }}
+                </span>
+
+                {% endfor %}
+
+            </div>
+
         </div>
-        <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-            <a href="{% url 'process_all_ai' job.pk %}" class="btn btn-primary">🤖 Run AI on All</a>
-            <a href="{% url 'hr_dashboard' %}" class="btn btn-secondary">← Back</a>
+
+        <!-- RIGHT BUTTONS -->
+        <div style="
+            display:flex;
+            gap:0.75rem;
+            flex-wrap:wrap;
+            align-items:flex-start;
+        ">
+
+            <a href="{% url 'process_all_ai' job.pk %}" class="btn btn-primary">
+                🤖 Run AI on All
+            </a>
+
+            <a href="{% url 'hr_dashboard' %}" class="btn btn-secondary">
+                ← Back
+            </a>
+
         </div>
+
     </div>
 
     {% if applications %}
-    <div class="card">
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Candidate</th>
-                        <th>Applied</th>
-                        <th>Resume Score</th>
-                        <th>Technical Score</th>
-                        <th>HR Score</th>
-                        <th>Final Score</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for app in applications %}
-                    <tr>
-                        <!-- Rank -->
-                        <td>
-                            <span class="rank-num {% if app.rank == 1 %}rank-1{% elif app.rank == 2 %}rank-2{% elif app.rank == 3 %}rank-3{% endif %}">
-                                {% if app.rank %}#{{ app.rank }}{% else %}—{% endif %}
-                            </span>
-                        </td>
 
-                        <!-- Candidate -->
-                        <td>
-                            <strong>{{ app.candidate.get_full_name|default:app.candidate.username }}</strong>
-                            <div style="font-size:0.8rem; color:#888;">{{ app.candidate.email }}</div>
-                        </td>
+    <div class="card" style="
+        overflow-x:auto;
+        border-radius:18px;
+    ">
 
-                        <!-- Applied Date -->
-                        <td style="font-size:0.85rem; color:#888;">{{ app.applied_at|date:"M d, Y" }}</td>
+        <table style="
+            width:100%;
+            border-collapse:collapse;
+            min-width:1400px;
+        ">
 
-                        <!-- Resume Score -->
-                        <td>
-                            {% if app.resume_score is not None %}
-                            <div style="font-weight:700; color:{% if app.resume_score >= 0.7 %}#27ae60{% elif app.resume_score >= 0.5 %}#e67e22{% else %}#e74c3c{% endif %}">
-                                {{ app.resume_score|floatformat:2 }}
-                            </div>
-                            <div class="score-bar" style="width:80px;">
-                                <div class="score-fill {% if app.resume_score >= 0.7 %}score-high{% elif app.resume_score >= 0.5 %}score-medium{% else %}score-low{% endif %}"
-                                     style="width:{% widthratio app.resume_score 1 100 %}%"></div>
-                            </div>
+            <thead style="
+                background:#f8f9fc;
+            ">
+                <tr>
+
+                    <th style="padding:1rem;">Rank</th>
+                    <th style="padding:1rem;">Candidate</th>
+                    <th style="padding:1rem;">Applied</th>
+                    <th style="padding:1rem;">Resume Score</th>
+                    <th style="padding:1rem; min-width:420px;">AI Analysis</th>
+                    <th style="padding:1rem;">Technical</th>
+                    <th style="padding:1rem;">HR</th>
+                    <th style="padding:1rem;">Final</th>
+                    <th style="padding:1rem;">Status</th>
+                    <th style="padding:1rem;">Actions</th>
+
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for app in applications %}
+
+                <tr style="
+                    border-top:1px solid #ececec;
+                    vertical-align:top;
+                ">
+
+                    <!-- RANK -->
+                    <td style="padding:1rem;">
+
+                        <span class="rank-num {% if app.rank == 1 %}rank-1{% elif app.rank == 2 %}rank-2{% elif app.rank == 3 %}rank-3{% endif %}">
+                            {% if app.rank %}
+                                #{{ app.rank }}
                             {% else %}
-                            <span style="color:#ccc; font-size:0.85rem;">Not processed</span>
+                                —
                             {% endif %}
-                        </td>
+                        </span>
 
-                        <!-- Technical Score -->
-                        <td>
-                            {% if app.technical_score is not None %}
-                            <span style="font-weight:700; color:{% if app.technical_score >= 7 %}#27ae60{% elif app.technical_score >= 5 %}#e67e22{% else %}#e74c3c{% endif %}">
-                                {{ app.technical_score }}/10
-                            </span>
-                            {% if app.technical_attended == False %}
-                            <div style="font-size:0.75rem; color:#e74c3c;">Absent</div>
-                            {% endif %}
-                            {% else %}—{% endif %}
-                        </td>
+                    </td>
 
-                        <!-- HR Score -->
-                        <td>
-                            {% if app.hr_score is not None %}
-                            <span style="font-weight:700; color:{% if app.hr_score >= 7 %}#27ae60{% elif app.hr_score >= 5 %}#e67e22{% else %}#e74c3c{% endif %}">
-                                {{ app.hr_score }}/10
-                            </span>
-                            {% if app.hr_attended == False %}
-                            <div style="font-size:0.75rem; color:#e74c3c;">Absent</div>
-                            {% endif %}
-                            {% else %}—{% endif %}
-                        </td>
+                    <!-- CANDIDATE -->
+                    <td style="padding:1rem;">
 
-                        <!-- Final Score -->
-                        <td>
-                            {% if app.final_score is not None %}
-                            <strong style="color:{% if app.final_score >= 0.7 %}#27ae60{% elif app.final_score >= 0.5 %}#e67e22{% else %}#e74c3c{% endif %}">
-                                {{ app.final_score|floatformat:3 }}
-                            </strong>
-                            {% if app.system_recommendation %}
-                            <div style="font-size:0.75rem; color:{% if app.system_recommendation == 'selected' %}#27ae60{% else %}#e74c3c{% endif %};">
-                                🤖 {{ app.system_recommendation|capfirst }}
+                        <strong>
+                            {{ app.candidate.get_full_name|default:app.candidate.username }}
+                        </strong>
+
+                        <div style="
+                            font-size:0.82rem;
+                            color:#888;
+                            margin-top:0.2rem;
+                        ">
+                            {{ app.candidate.email }}
+                        </div>
+
+                    </td>
+
+                    <!-- APPLIED -->
+                    <td style="
+                        padding:1rem;
+                        color:#777;
+                        font-size:0.85rem;
+                    ">
+                        {{ app.applied_at|date:"M d, Y" }}
+                    </td>
+
+                    <!-- RESUME SCORE -->
+                    <td style="padding:1rem;">
+
+                        {% if app.resume_score is not None %}
+
+                        <div style="
+                            font-weight:700;
+                            margin-bottom:0.4rem;
+                            color:{% if app.resume_score >= 0.7 %}#27ae60{% elif app.resume_score >= 0.5 %}#e67e22{% else %}#e74c3c{% endif %};
+                        ">
+                            {{ app.resume_score|floatformat:2 }}
+                        </div>
+
+                        <div style="
+                            width:90px;
+                            height:10px;
+                            background:#e5e7eb;
+                            border-radius:30px;
+                            overflow:hidden;
+                        ">
+
+                            <div style="
+                                height:100%;
+                                border-radius:30px;
+                                width:{% widthratio app.resume_score 1 100 %}%;
+                                background:{% if app.resume_score >= 0.7 %}#2ecc71{% elif app.resume_score >= 0.5 %}#f39c12{% else %}#e74c3c{% endif %};
+                            ">
                             </div>
-                            {% endif %}
-                            {% else %}—{% endif %}
-                        </td>
 
-                        <!-- Status -->
-                        <td><span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span></td>
+                        </div>
 
-                        <!-- Actions based on status -->
-                        <td>
-                            <div style="display:flex; flex-direction:column; gap:0.3rem;">
-                                <a href="{% url 'application_detail_hr' app.pk %}" class="btn btn-info btn-sm">👁 View</a>
+                        {% else %}
 
-                                {% if app.status == 'applied' %}
-                                <a href="{% url 'shortlist_candidate' app.pk %}" class="btn btn-warning btn-sm">📋 Shortlist</a>
+                        <span style="
+                            color:#bbb;
+                            font-size:0.85rem;
+                        ">
+                            Not processed
+                        </span>
 
-                                {% elif app.status == 'shortlisted' %}
-                                <a href="{% url 'schedule_technical' app.pk %}" class="btn btn-primary btn-sm">📅 Schedule Tech</a>
+                        {% endif %}
 
-                                {% elif app.status == 'technical_scheduled' %}
-                                <a href="{% url 'enter_technical_score' app.pk %}" class="btn btn-success btn-sm">📝 Tech Score</a>
+                    </td>
 
-                                {% elif app.status == 'technical_completed' %}
-                                {% if app.technical_score >= 5.0 %}
-                                <a href="{% url 'schedule_hr_interview' app.pk %}" class="btn btn-primary btn-sm">📅 Schedule HR</a>
+                    <!-- AI ANALYSIS -->
+                    <td style="
+                        padding:1rem;
+                        min-width:420px;
+                    ">
+
+                        <!-- REJECTED -->
+                        {% if app.status == 'not_shortlisted' %}
+
+                        <div style="
+                            background:#fff5f5;
+                            border:1px solid #ffd6d6;
+                            border-radius:14px;
+                            padding:1rem;
+                        ">
+
+                            <div style="
+                                color:#e74c3c;
+                                font-weight:700;
+                                margin-bottom:0.8rem;
+                                font-size:0.95rem;
+                            ">
+                                ❌ AI Rejection Reason
+                            </div>
+
+                            <div style="
+                                background:#ffffff;
+                                border:1px solid #ffdede;
+                                border-radius:10px;
+                                padding:0.9rem;
+                                font-size:0.84rem;
+                                color:#444;
+                                line-height:1.7;
+                                white-space:pre-line;
+                                word-break:break-word;
+                            ">
+
+                                {% if app.rejection_reason %}
+                                    {{ app.rejection_reason }}
+                                {% elif app.resume_score < 0.5 %}
+                                    Resume similarity score is too low compared with the job description.
+                                {% elif app.resume_score < 0.6 %}
+                                    Candidate profile partially matches the required qualifications but does not meet the AI shortlist threshold.
                                 {% else %}
-                                <span style="color:#e74c3c; font-size:0.8rem;" title="Minimum required: 5.0/10">
-                                    Score: {{ app.technical_score }}/10 (too low)
-                                </span>
+                                    Important required skills and qualifications are missing from the resume.
                                 {% endif %}
 
-                                {% elif app.status == 'hr_scheduled' %}
-                                <a href="{% url 'enter_hr_score' app.pk %}" class="btn btn-success btn-sm">📝 HR Score</a>
-
-                                {% elif app.status == 'system_recommended' %}
-                                <a href="{% url 'final_decision' app.pk %}" class="btn btn-warning btn-sm">⚖️ Final Decision</a>
-
-                                {% elif app.status == 'selected' %}
-                                <span style="color:#27ae60; font-weight:700; font-size:0.85rem;">✅ Selected</span>
-
-                                {% elif app.status == 'rejected' %}
-                                <span style="color:#e74c3c; font-weight:700; font-size:0.85rem;">❌ Rejected</span>
-
-                                {% endif %}
                             </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+
+                            {% if app.missing_skills %}
+
+                            <div style="
+                                margin-top:1rem;
+                            ">
+
+                                <div style="
+                                    font-weight:700;
+                                    color:#1a1a2e;
+                                    margin-bottom:0.6rem;
+                                    font-size:0.82rem;
+                                ">
+                                    Missing Skills
+                                </div>
+
+                                <div style="
+                                    display:flex;
+                                    flex-wrap:wrap;
+                                    gap:0.45rem;
+                                ">
+
+                                    {% for skill in app.get_missing_skills_list %}
+
+                                    <span style="
+                                        background:#ffeaea;
+                                        color:#c0392b;
+                                        padding:0.35rem 0.7rem;
+                                        border-radius:30px;
+                                        font-size:0.73rem;
+                                        border:1px solid #ffbcbc;
+                                        font-weight:600;
+                                    ">
+                                        {{ skill }}
+                                    </span>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            </div>
+
+                            {% endif %}
+
+                        </div>
+
+                        <!-- SHORTLISTED -->
+                        {% elif app.status == 'shortlisted' or app.status == 'technical_scheduled' or app.status == 'technical_completed' or app.status == 'hr_scheduled' or app.status == 'hr_completed' or app.status == 'system_recommended' or app.status == 'selected' %}
+
+                        <div style="
+                            background:#f0fff4;
+                            border:1px solid #c9f7d7;
+                            border-radius:12px;
+                            padding:1rem;
+                        ">
+
+                            <div style="
+                                color:#27ae60;
+                                font-weight:700;
+                                margin-bottom:0.45rem;
+                            ">
+                                ✅ AI Shortlisted Candidate
+                            </div>
+
+                            <div style="
+                                background:#ffffff;
+                                border:1px solid #d7f5df;
+                                border-radius:10px;
+                                padding:0.9rem;
+                                font-size:0.84rem;
+                                color:#444;
+                                line-height:1.7;
+                                white-space:pre-line;
+                                word-break:break-word;
+                            ">
+
+                                {% if app.resume_score >= 0.85 %}
+                                    Excellent resume similarity score with strong alignment to required technical skills and qualifications.
+                                {% elif app.resume_score >= 0.75 %}
+                                    Strong skill matching detected and candidate profile satisfies most job requirements successfully.
+                                {% elif app.resume_score >= 0.65 %}
+                                    Candidate meets the AI shortlist threshold with acceptable resume relevance and qualifications.
+                                {% elif app.resume_score >= 0.60 %}
+                                    Candidate profile shows moderate compatibility with the required skills and experience.
+                                {% else %}
+                                    Candidate shortlisted based on overall profile relevance and AI matching analysis.
+                                {% endif %}
+
+                            </div>
+
+                            {% if app.missing_skills %}
+
+                            <div style="
+                                margin-top:1rem;
+                            ">
+
+                                <div style="
+                                    font-weight:700;
+                                    color:#1a1a2e;
+                                    margin-bottom:0.6rem;
+                                    font-size:0.82rem;
+                                ">
+                                    Minor Missing Skills
+                                </div>
+
+                                <div style="
+                                    display:flex;
+                                    flex-wrap:wrap;
+                                    gap:0.45rem;
+                                ">
+
+                                    {% for skill in app.get_missing_skills_list %}
+
+                                    <span style="
+                                        background:#fff8e7;
+                                        color:#b9770e;
+                                        padding:0.35rem 0.7rem;
+                                        border-radius:30px;
+                                        font-size:0.73rem;
+                                        border:1px solid #f9d98c;
+                                        font-weight:600;
+                                    ">
+                                        {{ skill }}
+                                    </span>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            </div>
+
+                            {% endif %}
+
+                        </div>
+
+                        {% else %}
+
+                        <span style="
+                            color:#999;
+                            font-size:0.85rem;
+                        ">
+                            AI analysis pending
+                        </span>
+
+                        {% endif %}
+
+                    </td>
+
+                    <!-- TECHNICAL -->
+                    <td style="padding:1rem;">
+
+                        {% if app.technical_score is not None %}
+
+                        <div style="
+                            font-weight:700;
+                            color:{% if app.technical_score >= 7 %}#27ae60{% elif app.technical_score >= 5 %}#e67e22{% else %}#e74c3c{% endif %};
+                        ">
+                            {{ app.technical_score }}/10
+                        </div>
+
+                        {% if app.technical_attended == False %}
+
+                        <div style="
+                            font-size:0.75rem;
+                            color:#e74c3c;
+                            margin-top:0.3rem;
+                        ">
+                            Absent
+                        </div>
+
+                        {% endif %}
+
+                        {% else %}
+                        —
+                        {% endif %}
+
+                    </td>
+
+                    <!-- HR -->
+                    <td style="padding:1rem;">
+
+                        {% if app.hr_score is not None %}
+
+                        <div style="
+                            font-weight:700;
+                            color:{% if app.hr_score >= 7 %}#27ae60{% elif app.hr_score >= 5 %}#e67e22{% else %}#e74c3c{% endif %};
+                        ">
+                            {{ app.hr_score }}/10
+                        </div>
+
+                        {% if app.hr_attended == False %}
+
+                        <div style="
+                            font-size:0.75rem;
+                            color:#e74c3c;
+                            margin-top:0.3rem;
+                        ">
+                            Absent
+                        </div>
+
+                        {% endif %}
+
+                        {% else %}
+                        —
+                        {% endif %}
+
+                    </td>
+
+                    <!-- FINAL -->
+                    <td style="padding:1rem;">
+
+                        {% if app.final_score is not None %}
+
+                        <div style="
+                            font-weight:800;
+                            font-size:1rem;
+                            color:{% if app.final_score >= 0.7 %}#27ae60{% elif app.final_score >= 0.5 %}#e67e22{% else %}#e74c3c{% endif %};
+                        ">
+                            {{ app.final_score|floatformat:3 }}
+                        </div>
+
+                        {% if app.system_recommendation %}
+
+                        <div style="
+                            margin-top:0.35rem;
+                            font-size:0.76rem;
+                            font-weight:600;
+                            color:{% if app.system_recommendation == 'selected' %}#27ae60{% else %}#e74c3c{% endif %};
+                        ">
+                            🤖 {{ app.system_recommendation|capfirst }}
+                        </div>
+
+                        {% endif %}
+
+                        {% else %}
+                        —
+                        {% endif %}
+
+                    </td>
+
+                    <!-- STATUS -->
+                    <td style="padding:1rem;">
+
+                        <span class="badge badge-{{ app.status }}">
+                            {{ app.get_status_display }}
+                        </span>
+
+                    </td>
+
+                    <!-- ACTIONS -->
+                    <td style="padding:1rem;">
+
+                        <a href="{% url 'application_detail_hr' app.pk %}" class="btn btn-info btn-sm">
+                            👁 View
+                        </a>
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
     </div>
+
     {% else %}
-    <div class="card" style="text-align:center; padding:3rem;">
-        <div style="font-size:3rem; margin-bottom:1rem;">👥</div>
-        <p style="color:#888;">No applications yet for this job.</p>
+
+    <div class="card" style="
+        text-align:center;
+        padding:3rem;
+    ">
+
+        <div style="
+            font-size:3rem;
+            margin-bottom:1rem;
+        ">
+            👥
+        </div>
+
+        <p style="color:#888;">
+            No applications yet for this job.
+        </p>
+
     </div>
+
     {% endif %}
+
 </div>
 {% endblock %}

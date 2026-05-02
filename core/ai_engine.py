@@ -2,6 +2,7 @@
 AI Processing Module - SBERT Embedding + Cosine Similarity
 Uses sentence-transformers (all-MiniLM-L6-v2) for 384-dim embeddings
 """
+
 import re
 import io
 import logging
@@ -15,11 +16,16 @@ def extract_text_from_pdf(file_path: str) -> str:
     try:
         import fitz  # PyMuPDF
         doc = fitz.open(file_path)
+
         text = ""
+
         for page in doc:
             text += page.get_text()
+
         doc.close()
+
         return text
+
     except Exception as e:
         logger.error(f"PDF extraction error: {e}")
         return ""
@@ -29,9 +35,13 @@ def extract_text_from_docx(file_path: str) -> str:
     """Extract text from DOCX using python-docx."""
     try:
         from docx import Document
+
         doc = Document(file_path)
+
         text = "\n".join([para.text for para in doc.paragraphs])
+
         return text
+
     except Exception as e:
         logger.error(f"DOCX extraction error: {e}")
         return ""
@@ -39,15 +49,20 @@ def extract_text_from_docx(file_path: str) -> str:
 
 def extract_resume_text(file_path: str) -> str:
     """Auto-detect file type and extract text."""
+
     file_path = str(file_path)
+
     if file_path.lower().endswith('.pdf'):
         return extract_text_from_pdf(file_path)
+
     elif file_path.lower().endswith('.docx'):
         return extract_text_from_docx(file_path)
+
     else:
         try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 return f.read()
+
         except Exception as e:
             logger.error(f"Text extraction error: {e}")
             return ""
@@ -62,18 +77,25 @@ def clean_text(text: str) -> str:
     - Normalize whitespace
     - Lowercase
     """
+
     if not text:
         return ""
+
     # Remove URLs
     text = re.sub(r'http\S+|www\S+', '', text)
+
     # Remove email addresses
     text = re.sub(r'\S+@\S+', '', text)
+
     # Remove special characters except alphanumeric and basic punctuation
     text = re.sub(r'[^a-zA-Z0-9\s\.,\-]', ' ', text)
+
     # Normalize whitespace
     text = re.sub(r'\s+', ' ', text).strip()
+
     # Lowercase
     text = text.lower()
+
     return text
 
 
@@ -81,17 +103,24 @@ def clean_text(text: str) -> str:
 
 _model = None
 
+
 def get_sbert_model():
     """Load SBERT model (cached singleton)."""
+
     global _model
+
     if _model is None:
         try:
             from sentence_transformers import SentenceTransformer
+
             _model = SentenceTransformer('all-MiniLM-L6-v2')
+
             logger.info("SBERT model loaded: all-MiniLM-L6-v2")
+
         except Exception as e:
             logger.error(f"Failed to load SBERT model: {e}")
             raise
+
     return _model
 
 
@@ -100,9 +129,13 @@ def generate_embedding(text: str):
     Phase 4 Step 2: Generate 384-dimensional SBERT embedding.
     Returns numpy array.
     """
+
     model = get_sbert_model()
+
     cleaned = clean_text(text)
+
     embedding = model.encode(cleaned, convert_to_numpy=True)
+
     return embedding
 
 
@@ -114,18 +147,25 @@ def cosine_similarity(vec_a, vec_b) -> float:
     Similarity = (A · B) / (||A|| × ||B||)
     Returns value between 0 and 1.
     """
+
     import numpy as np
+
     dot = np.dot(vec_a, vec_b)
+
     norm_a = np.linalg.norm(vec_a)
+
     norm_b = np.linalg.norm(vec_b)
+
     if norm_a == 0 or norm_b == 0:
         return 0.0
+
     return float(dot / (norm_a * norm_b))
 
 
 # ── Main Matching Pipeline ───────────────────────────────────────────────────
 
 SHORTLIST_THRESHOLD = 0.60  # Phase 5
+
 
 def compute_similarity(job_text: str, resume_text: str) -> float:
     """
@@ -135,68 +175,194 @@ def compute_similarity(job_text: str, resume_text: str) -> float:
     3. Compute cosine similarity
     Returns similarity score (0–1).
     """
+
     if not job_text or not resume_text:
-        logger.warning(f"Empty text provided: job_len={len(job_text) if job_text else 0}, resume_len={len(resume_text) if resume_text else 0}")
+        logger.warning(
+            f"Empty text provided: job_len={len(job_text) if job_text else 0}, "
+            f"resume_len={len(resume_text) if resume_text else 0}"
+        )
         return 0.0
+
     job_embedding = generate_embedding(job_text)
+
     resume_embedding = generate_embedding(resume_text)
+
     score = cosine_similarity(job_embedding, resume_embedding)
+
     return round(score, 4)
 
 
 def get_job_full_text(job) -> str:
     """Combine job fields into single text for embedding."""
-    return f"{job.title} {job.required_skills} {job.required_experience} {job.description}"
+
+    return (
+        f"{job.title} "
+        f"{job.required_skills} "
+        f"{job.required_experience} "
+        f"{job.description}"
+    )
+
+
+# ── AI Explainability ────────────────────────────────────────────────────────
+
+def detect_missing_skills(job_skills: str, resume_text: str):
+    """
+    Detect missing skills from resume.
+    Returns list of missing skills.
+    """
+
+    if not job_skills or not resume_text:
+        return []
+
+    required_skills = [
+        skill.strip().lower()
+        for skill in job_skills.split(',')
+        if skill.strip()
+    ]
+
+    resume_text = resume_text.lower()
+
+    missing = []
+
+    for skill in required_skills:
+        if skill not in resume_text:
+            missing.append(skill)
+
+    return missing
+
+
+def generate_rejection_reason(score: float, missing_skills: list):
+    """
+    Generate human-readable rejection reason.
+    """
+
+    reasons = []
+
+    if score < SHORTLIST_THRESHOLD:
+        reasons.append(
+            "Low semantic similarity with job description"
+        )
+
+    if missing_skills:
+        reasons.append(
+            f"Missing required skills: {', '.join(missing_skills)}"
+        )
+
+    if not reasons:
+        return "Profile does not sufficiently match job requirements."
+
+    return ". ".join(reasons)
 
 
 def determine_status(score: float) -> str:
     """Phase 5: Automatic Shortlisting."""
+
     if score >= SHORTLIST_THRESHOLD:
         return 'shortlisted'
+
     return 'not_shortlisted'
 
 
 def process_application(application) -> float:
     """
     Full AI processing for a single application:
-    1. Extract resume text (if not already done)
+
+    1. Extract resume text
     2. Compute similarity score
-    3. Update status
-    4. Save application
+    3. Detect missing skills
+    4. Generate rejection reason
+    5. Update status
+    6. Save application
+
     Returns similarity score.
     """
+
     from django.conf import settings
     import os
 
     try:
-        # Extract resume text if needed
-        if not application.resume_text:
-            file_path = os.path.join(settings.MEDIA_ROOT, str(application.resume))
-            logger.info(f"Extracting text from: {file_path}")
-            application.resume_text = extract_resume_text(file_path)
-            if not application.resume_text:
-                logger.warning(f"No text extracted from resume for app {application.id}")
-                return 0.0
-            logger.info(f"Resume text extracted: {len(application.resume_text)} chars")
 
-        # Get job text
+        # ── Extract Resume Text ─────────────────────────────
+
+        if not application.resume_text:
+
+            file_path = os.path.join(
+                settings.MEDIA_ROOT,
+                str(application.resume)
+            )
+
+            logger.info(f"Extracting text from: {file_path}")
+
+            application.resume_text = extract_resume_text(file_path)
+
+            if not application.resume_text:
+                logger.warning(
+                    f"No text extracted from resume for app {application.id}"
+                )
+                return 0.0
+
+            logger.info(
+                f"Resume text extracted: "
+                f"{len(application.resume_text)} chars"
+            )
+
+        # ── Prepare Job Text ───────────────────────────────
+
         job_text = get_job_full_text(application.job)
+
         logger.info(f"Job text prepared: {len(job_text)} chars")
 
-        # Compute similarity
-        score = compute_similarity(job_text, application.resume_text)
+        # ── Compute Similarity ─────────────────────────────
+
+        score = compute_similarity(
+            job_text,
+            application.resume_text
+        )
+
         logger.info(f"Similarity score computed: {score}")
+
         application.resume_score = score
 
-        # Auto-shortlist
+        # ── Detect Missing Skills ──────────────────────────
+
+        missing_skills = detect_missing_skills(
+            application.job.required_skills,
+            application.resume_text
+        )
+
+        application.missing_skills = ", ".join(missing_skills)
+
+        # ── Generate Rejection Reason ──────────────────────
+
+        application.rejection_reason = generate_rejection_reason(
+            score,
+            missing_skills
+        )
+
+        # ── Automatic Shortlisting ─────────────────────────
+
         if application.status == 'applied':
             application.status = determine_status(score)
 
+        # ── Save Application ───────────────────────────────
+
         application.save()
-        logger.info(f"Application {application.id} processed with score: {score}")
+
+        logger.info(
+            f"Application {application.id} processed "
+            f"with score: {score}"
+        )
+
         return score
+
     except Exception as e:
-        logger.error(f"Error processing application {application.id}: {str(e)}", exc_info=True)
+
+        logger.error(
+            f"Error processing application "
+            f"{application.id}: {str(e)}",
+            exc_info=True
+        )
+
         raise
 
 
@@ -206,8 +372,13 @@ def rank_applicants_for_job(job) -> list:
     Returns applications sorted by similarity score (descending).
     Updates rank field for each application.
     """
+
     applications = list(job.applications.all())
-    applications.sort(key=lambda a: a.resume_score or 0, reverse=True)
+
+    applications.sort(
+        key=lambda a: a.resume_score or 0,
+        reverse=True
+    )
 
     for rank, app in enumerate(applications, start=1):
         app.rank = rank
